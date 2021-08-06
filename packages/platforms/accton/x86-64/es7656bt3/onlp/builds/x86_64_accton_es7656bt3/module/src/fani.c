@@ -56,7 +56,7 @@ enum fan_id {
     { \
         { ONLP_FAN_ID_CREATE(FAN_##fid##_ON_PSU_##pid), "PSU "#pid" - Fan "#fid, 0 },\
         0x0,\
-        ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,\
+        ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,\
         0,\
         0,\
         ONLP_FAN_MODE_INVALID,\
@@ -321,7 +321,7 @@ onlp_fani_percentage_set(onlp_oid_t id, int p)
 
 	DEBUG_PRINT("Fan path = (%s)", path);
 	
-    if (onlp_file_write_integer(path, p) < 0) {
+    if (onlp_file_write_int(p, path) < 0) {
         AIM_LOG_ERROR("Unable to write data to file (%s)\r\n", path);
         return ONLP_STATUS_E_INTERNAL;
     }

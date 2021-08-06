@@ -23,7 +23,7 @@ x86-64-accton-es7656bt3-r0:
     args: >-
       nopat
       console=ttyS0,115200n8
-      intel_iommu=pt
+      intel_iommu=off
       i2c-ismt.bus_speed=100
       i2c-ismt.delay=100
 

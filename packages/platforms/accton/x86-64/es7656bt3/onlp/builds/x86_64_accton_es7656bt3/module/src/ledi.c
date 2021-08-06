@@ -32,8 +32,7 @@
 #include <limits.h>
 #include "platform_lib.h"
 
-#define prefix_path "/sys/class/leds/accton_es7656bt3_led::"
-#define filename    "brightness"
+#define LED_FORMAT "/sys/class/leds/accton_es7656bt3_led::%s/brightness"
 
 #define VALIDATE(_id)                           \
     do {                                        \
@@ -46,8 +45,7 @@
  */
 enum onlp_led_id
 {
-    LED_RESERVED = 0,
-    LED_STAT,
+    LED_STAT = 1,
     LED_LOC,
     LED_FAN,
     LED_PSU1,
@@ -82,9 +80,9 @@ led_light_mode_map_t led_map[] = {
 {LED_PSU2, LED_MODE_AUTO,   ONLP_LED_MODE_AUTO}
 };
 
-static char last_path[][10] =  /* must map with onlp_led_id */
+static char *leds[] =  /* must map with onlp_led_id */
 {
-    "reserved",
+    NULL,
     "stat",
     "loc",
     "fan",
@@ -120,7 +118,7 @@ static onlp_led_info_t linfo[] =
         ONLP_LED_CAPS_AUTO,
     },
     {
-        { ONLP_LED_ID_CREATE(LED_PSU2), "Chassis LED 4 (PSU2 LED)", 0 },
+        { ONLP_LED_ID_CREATE(LED_PSU2), "Chassis LED 5 (PSU2 LED)", 0 },
         ONLP_LED_STATUS_PRESENT,
         ONLP_LED_CAPS_AUTO,
     },
@@ -168,26 +166,20 @@ onlp_ledi_init(void)
 int
 onlp_ledi_info_get(onlp_oid_t id, onlp_led_info_t* info)
 {
-    int  local_id;
-	char data[3] = {0};
-    char fullpath[PATH_MAX] = {0};
-
+    int  lid, value;    
     VALIDATE(id);
+    
+    lid = ONLP_OID_ID_GET(id);
 
-    local_id = ONLP_OID_ID_GET(id);
-    /* get fullpath */
-    sprintf(fullpath, "%s%s/%s", prefix_path, last_path[local_id], filename);
-
-	/* Set the onlp_oid_hdr_t and capabilities */
+    /* Set the onlp_oid_hdr_t and capabilities */
     *info = linfo[ONLP_OID_ID_GET(id)];
 
-    /* Set LED mode */
-    if (onlp_file_read_string(fullpath, data, sizeof(data), 0) != 0) {
-        DEBUG_PRINT("%s(%d)\r\n", __FUNCTION__, __LINE__);
+    /* Get LED mode */
+    if (onlp_file_read_int(&value, LED_FORMAT, leds[lid]) < 0) {
         return ONLP_STATUS_E_INTERNAL;
     }
 
-    info->mode = driver_to_onlp_led_mode(local_id, atoi(data));
+    info->mode = driver_to_onlp_led_mode(lid, value);
 
     /* Set the on/off status */
     if (info->mode != ONLP_LED_MODE_OFF) {
@@ -227,22 +219,20 @@ onlp_ledi_set(onlp_oid_t id, int on_or_off)
 int
 onlp_ledi_mode_set(onlp_oid_t id, onlp_led_mode_t mode)
 {
-    int  local_id;
-    char fullpath[PATH_MAX] = {0};
+    int  lid;
+    char path[64] = {0};        
 
     VALIDATE(id);
+    
+    lid = ONLP_OID_ID_GET(id);
+    sprintf(path, LED_FORMAT, leds[lid]);
 
-    local_id = ONLP_OID_ID_GET(id);
-    sprintf(fullpath, "%s%s/%s", prefix_path, last_path[local_id], filename);
-
-    if (onlp_file_write_integer(fullpath, onlp_to_driver_led_mode(local_id, mode)) != 0)
-    {
+    if (onlp_file_write_int(onlp_to_driver_led_mode(lid , mode), path) != 0) {
         return ONLP_STATUS_E_INTERNAL;
     }
 
     return ONLP_STATUS_OK;
 }
-
 /*
  * Generic LED ioctl interface.
  */
