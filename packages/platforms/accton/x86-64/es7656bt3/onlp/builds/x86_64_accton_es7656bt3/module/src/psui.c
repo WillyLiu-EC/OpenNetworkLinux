@@ -29,9 +29,6 @@
 #include <string.h>
 #include "platform_lib.h"
 
-#define PSU_STATUS_PRESENT    1
-#define PSU_STATUS_POWER_GOOD 1
-
 #define VALIDATE(_id)                           \
     do {                                        \
         if(!ONLP_OID_IS_PSU(_id)) {             \
@@ -140,7 +137,6 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     }
     info->status |= ONLP_PSU_STATUS_PRESENT;
 
-
     /* Get power good status */
     if (psu_status_info_get(index, "psu_power_good", &val) != 0) {
         printf("Unable to read PSU(%d) node(psu_power_good)\r\n", index);
@@ -148,6 +144,7 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
 
     if (val != PSU_STATUS_POWER_GOOD) {
         info->status |=  ONLP_PSU_STATUS_FAILED;
+        return ONLP_STATUS_OK;
     }
     /* Get PSU type */
     psu_type = get_psu_type(index, info->model, sizeof(info->model));

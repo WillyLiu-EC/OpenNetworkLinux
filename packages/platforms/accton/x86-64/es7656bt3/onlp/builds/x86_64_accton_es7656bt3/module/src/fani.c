@@ -152,7 +152,14 @@ _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
     }
 
     /* get speed percentage from rpm */
-    info->percentage = (info->rpm * 100)/MAX_FAN_SPEED;
+    sprintf(path, "%s""pwm1", FAN_BOARD_PATH);
+    DEBUG_PRINT("Fan (%d), rear speed path = (%s)", fid, path);
+
+    if (onlp_file_read_int(&value, path) < 0) {
+        AIM_LOG_ERROR("Unable to read status from file (%s)\r\n", path);
+        return ONLP_STATUS_E_INTERNAL;
+    }
+    info->percentage = value;
     
     return ONLP_STATUS_OK;
 }
@@ -164,9 +171,43 @@ _onlp_get_fan_direction_on_psu(void)
      * If PSU1 is not valid, read from PSU2
      */
     int i = 0;
+    int value = 0;
+    char path[PSU_NODE_MAX_PATH_LEN] = {0};
+    psu_type_t psu_type;
 
     for (i = PSU1_ID; i <= PSU2_ID; i++) {
-        psu_type_t psu_type;
+        /* check psu present */
+        if (PSU1_ID == i) {
+            sprintf(path, "%s%s", PSU1_AC_HWMON_PREFIX, "psu_present");
+        }
+        else if (PSU2_ID == i) {
+            sprintf(path, "%s%s", PSU2_AC_HWMON_PREFIX, "psu_present");
+        }
+        if (onlp_file_read_int(&value, path) < 0) {
+            AIM_LOG_ERROR("Unable to read status from file(%s)\r\n", path);
+            return ONLP_STATUS_E_INTERNAL;
+        }
+
+        if (value != PSU_STATUS_PRESENT) {
+            return ONLP_STATUS_OK;
+        }
+
+        /* check power good */
+        if (PSU1_ID == i) {
+            sprintf(path, "%s%s", PSU1_AC_HWMON_PREFIX, "psu_power_good");
+        }
+        else if (PSU2_ID == i) {
+            sprintf(path, "%s%s", PSU2_AC_HWMON_PREFIX, "psu_power_good");
+        }
+        if (onlp_file_read_int(&value, path) < 0) {
+            AIM_LOG_ERROR("Unable to read status from file(%s)\r\n", path);
+            return ONLP_STATUS_E_INTERNAL;
+        }
+
+        if (value != PSU_STATUS_POWER_GOOD) {
+            return ONLP_STATUS_OK;
+        }
+
         psu_type = get_psu_type(i, NULL, 0);
 
         if (psu_type == PSU_TYPE_UNKNOWN) {

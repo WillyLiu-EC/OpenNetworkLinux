@@ -36,6 +36,8 @@
 
 #define PSU1_ID 1
 #define PSU2_ID 2
+#define PSU_STATUS_PRESENT    1
+#define PSU_STATUS_POWER_GOOD 1
 
 #define PSU_NODE_MAX_INT_LEN  8
 #define PSU_NODE_MAX_PATH_LEN 64

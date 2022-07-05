@@ -26,8 +26,7 @@ int get_psu_serial_number(int id, char *serial, int serial_len)
     char *sn = NULL;
 
     /* Read AC serial number */
-    node = (id == PSU1_ID) ? PSU1_AC_PMBUS_NODE(psu_mfr_serial) : PSU1_AC_PMBUS_NODE(psu_mfr_serial);
-
+    node = (id == PSU1_ID) ? PSU1_AC_PMBUS_NODE(psu_mfr_serial) : PSU2_AC_PMBUS_NODE(psu_mfr_serial);
     ret = onlp_file_read_str(&sn, node);
     if (ret <= 0 || ret > PSU_SERIAL_NUMBER_LEN || sn == NULL) {
 
@@ -67,7 +66,6 @@ psu_type_t get_psu_type(int id, char* modelname, int modelname_len)
     if (modelname) {
         strncpy(modelname, model_name, PSU_MODEL_NAME_LEN + 1);
     }
-
 
     node = (id == PSU1_ID) ? PSU1_AC_PMBUS_NODE(psu_fan_dir) : PSU2_AC_PMBUS_NODE(psu_fan_dir);
     ret = onlp_file_read_str(&fan_dir, node);
