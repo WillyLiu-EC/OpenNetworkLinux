@@ -22,4 +22,47 @@
  *
  *
  ***********************************************************/
+#include "platform_lib.h"
+
+int bmc_curl_init(void)
+{
+    int i;
+
+    for(i = 0; i<HANDLECOUNT; i++)
+    {
+        curl[i] = curl_easy_init();
+        if (curl[i])
+        {
+            curl_easy_setopt(curl[i], CURLOPT_USERPWD, "root:0penBmc");
+            curl_easy_setopt(curl[i], CURLOPT_SSL_VERIFYPEER, 0L);
+            curl_easy_setopt(curl[i], CURLOPT_SSL_VERIFYHOST, 0L);
+
+        }
+        else
+        {
+            AIM_LOG_ERROR("Unable to init curl[%d]\r\n", i);
+            return -1;
+        }
+    }
+    /* init a multi stack */
+    multi_curl = curl_multi_init();
+
+    return 0;
+}
+
+int bmc_curl_deinit(void)
+{
+    int i;
+
+    printf("bmc_curl_deinit Start \n");
+    for(i = 0; i<HANDLECOUNT; i++)
+    {
+        curl_multi_remove_handle(multi_curl, curl[i]);
+        curl_easy_cleanup(curl[i]);
+    }
+
+    curl_multi_cleanup(multi_curl);
+
+    return 0;
+}
 

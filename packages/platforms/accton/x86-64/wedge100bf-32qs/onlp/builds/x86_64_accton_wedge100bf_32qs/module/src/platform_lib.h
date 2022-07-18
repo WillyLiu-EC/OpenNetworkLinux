@@ -27,6 +27,12 @@
 #define __PLATFORM_LIB_H__
 
 #include "x86_64_accton_wedge100bf_32qs_log.h"
+#include <curl/curl.h>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <onlplib/file.h>
+#include <onlp/onlp.h>
 
 #define DEBUG_MODE 0
 
@@ -43,6 +49,7 @@
 #define CHASSIS_PSU_COUNT     2
 
 #define IDPROM_PATH "/sys/class/i2c-adapter/i2c-40/40-0050/eeprom"
+#define BMC_CURL_PREFIX "https://[fe80::ff:fe00:1%usb0]:443/api/sys/bmc/"
 
 enum onlp_thermal_id
 {
@@ -54,9 +61,28 @@ enum onlp_thermal_id
     THERMAL_4_ON_MAIN_BROAD,
     THERMAL_5_ON_MAIN_BROAD,
     THERMAL_6_ON_MAIN_BROAD,
-    THERMAL_7_ON_MAIN_BROAD,
 };
 
-#endif  /* __PLATFORM_LIB_H__ */
+#define HANDLECOUNT 10
+enum curl_id
+{
+    CURL_THERMAL = 0,
+    CURL_PSU_PRESENT_1,
+    CURL_PSU_PRESENT_2,
+    CURL_PSU_STATUS_1,
+    CURL_PSU_STATUS_2,
+    CURL_FAN_STATUS_1,
+    CURL_FAN_STATUS_2,
+    CURL_FAN_STATUS_3,
+    CURL_FAN_STATUS_4,
+    CURL_FAN_STATUS_5,
+};
+CURL *curl[HANDLECOUNT];
+CURLM *multi_curl;
+CURLMsg *msg;
 
+int bmc_curl_init(void);
+int bmc_curl_deinit(void);
+
+#endif  /* __PLATFORM_LIB_H__ */
 

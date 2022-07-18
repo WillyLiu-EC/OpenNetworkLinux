@@ -49,6 +49,7 @@
 #define MODEL_LEN 16
 #define SERIAL_LEN 18
 #define STRING_STRAT_LOC 8
+
 static uint32_t ps[PS_NUM_ELE];
 static char ps_model[PS_DESC_LEN];
 static char ps_serial[PS_DESC_LEN];
@@ -74,7 +75,8 @@ onlp_psui_init(void)
     return ONLP_STATUS_OK;
 }
 
-static void ps_presence_call_back(void *p) {
+static void ps_presence_call_back(void *p)
+{
     int i = 0;
     char *ptr = p;
     ps_presence = PSU_ABSCENT;
@@ -104,7 +106,8 @@ static void ps_presence_call_back(void *p) {
     return;
 }
 
-static void ps_call_back(void *p) {
+static void ps_call_back(void *p)
+{
     int i = 0;
     int j = 0;
     int k = 0;
@@ -179,16 +182,17 @@ static void ps_call_back(void *p) {
     return;
 }
 
-
 int
 onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
 {
     int pid;
-    CURL *curl;
     char url[256] = {0};
     char model[MODEL_LEN+1];
     char serial[SERIAL_LEN+1];
     bool power_good = 0 ;
+    int curlid = 0;
+    int still_running = 1;
+    CURLMcode mc;
 
     VALIDATE(id);
 
@@ -197,60 +201,42 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
 
     memset(model, 0, sizeof(model));
     memset(serial, 0, sizeof(serial));
+    /* Get psu present by curl */
+    snprintf(url, sizeof(url),"%s""ps_feature/%d/presence/", BMC_CURL_PREFIX, pid);
 
-    snprintf(url, sizeof(url), "https://10.10.10.1:443/api/sys/bmc/ps_feature/%d/presence/", pid);
-    curl = curl_easy_init();
-    if (curl) 
-    {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ps_presence_call_back);
-        curl_easy_setopt(curl, CURLOPT_USERPWD, "root:0penBmc");
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-    } 
-    else 
-    {
-        AIM_LOG_ERROR("Unable to reaf data from bmc(%s)\r\n", url);
-        return ONLP_STATUS_E_INTERNAL;
+    curlid = CURL_PSU_PRESENT_1 + pid -1;
+
+    curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+    curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, ps_presence_call_back);
+    curl_multi_add_handle(multi_curl, curl[curlid]);
+
+    /* Get psu status by curl */
+    snprintf(url, sizeof(url),"%s""ps/%d", BMC_CURL_PREFIX, pid);
+
+    curlid = CURL_PSU_STATUS_1 + pid -1;
+
+    curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+    curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, ps_call_back);
+    curl_multi_add_handle(multi_curl, curl[curlid]);
+
+    while(still_running) {
+        mc = curl_multi_perform(multi_curl, &still_running);
+        if(mc != CURLM_OK)
+        {
+            AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+        }
     }
 
-    if (PSU_PRESENT != ps_presence) {
+    if (PSU_PRESENT != ps_presence)
+    {
         info->status &= ~ONLP_PSU_STATUS_PRESENT;
         return ONLP_STATUS_OK;
     }
     info->status |= ONLP_PSU_STATUS_PRESENT;
-
-    snprintf(url, sizeof(url), "https://10.10.10.1:443/api/sys/bmc/ps/%d", pid);
-    curl = curl_easy_init();
-    if (curl) 
-    {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ps_call_back);
-        curl_easy_setopt(curl, CURLOPT_USERPWD, "root:0penBmc");
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-    } 
-    else 
-    {
-        AIM_LOG_ERROR("Unable to reaf data from bmc(%s)\r\n", url);
-        return ONLP_STATUS_E_INTERNAL;
-    }
-    #if 0
-    /* In case of error, plug-out PSU1 the ps[0] of psu1&2 are both 1 */
-    if (ps[0] != 0) {
-        AIM_LOG_ERROR("Error returned from bmc with status %d \n", ps[0]);
-        return ONLP_STATUS_E_INTERNAL;
-    }
-    #endif
     /* Get the string */
     memcpy(model, ps_model + STRING_STRAT_LOC, MODEL_LEN);
     model[MODEL_LEN+1] = '\0';
+
     if((memcmp(model, "PFE600-12-054NA", 15) == 0) || (memcmp(model, "PFE1100-12-054NA", 15) == 0))
     {
         info->caps = ONLP_PSU_CAPS_AC;
@@ -259,40 +245,35 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     {
         info->caps = ONLP_PSU_CAPS_DC12;
     }
+
     memcpy(serial, ps_serial + STRING_STRAT_LOC, SERIAL_LEN);
     serial[SERIAL_LEN+1] = '\0';
     /* Get model name */
     strncpy(info->model, model, sizeof(info->model));
     /* Get serial number */
     strncpy(info->serial, serial, sizeof(info->serial));
-
-
-    /* Get power good status  - need to check */
+    /* Get power good status */
     power_good = ps[14];
-    if (power_good != PSU_STATUS_POWER_GOOD) {
+
+    if (PSU_STATUS_POWER_GOOD != power_good) 
+    {
         info->status |= ONLP_PSU_STATUS_FAILED;
     }
-
     /* Read vin */
     info->mvin = ps[1] * 1000;
     info->caps |= ONLP_PSU_CAPS_VIN;
-
     /* Read iin - need to check */
     info->miin = ps[3];
     info->caps |= ONLP_PSU_CAPS_IIN;
-
     /* Get pin - need to check */
     info->mpin = ps[4];
     info->caps |= ONLP_PSU_CAPS_PIN;
-
     /* Read iout - need to check*/
     info->miout = ps[16];
     info->caps |= ONLP_PSU_CAPS_IOUT;
- 
     /* Read pout */
     info->mpout = ps[15];
     info->caps |= ONLP_PSU_CAPS_POUT;
-
     /* Get vout */
     info->mvout = ps[2] * 1000;
     info->caps |= ONLP_PSU_CAPS_VOUT;
@@ -305,3 +286,4 @@ onlp_psui_ioctl(onlp_oid_t pid, va_list vargs)
 {
     return ONLP_STATUS_E_UNSUPPORTED;
 }
+

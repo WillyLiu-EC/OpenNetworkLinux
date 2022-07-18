@@ -70,21 +70,20 @@ onlp_sysi_oids_get(onlp_oid_t* table, int max)
     for (i = 1; i <= CHASSIS_THERMAL_COUNT; i++) {
         *e++ = ONLP_THERMAL_ID_CREATE(i);
     }
-
     /* 2 LEDs on the chassis */
     for (i = 1; i <= CHASSIS_LED_COUNT; i++) {
         *e++ = ONLP_LED_ID_CREATE(i);
     }
-
     /* 2 PSUs on the chassis */
     for (i = 1; i <= CHASSIS_PSU_COUNT; i++) {
         *e++ = ONLP_PSU_ID_CREATE(i);
     }
-
     /* 5 Fans on the chassis */
     for (i = 1; i <= CHASSIS_FAN_COUNT; i++) {
         *e++ = ONLP_FAN_ID_CREATE(i);
     }
+
+    bmc_curl_init();
 
     return 0;
 }

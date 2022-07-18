@@ -162,33 +162,30 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
     *info = linfo[tid];
     
     /* get path */
-    if (THERMAL_CPU_CORE == tid) {
+    if (THERMAL_CPU_CORE == tid)
+    {
         return onlp_file_read_int_max(&info->mcelsius, cpu_coretemp_files);
-    }else {
+    }
+    else 
+    {
         /* just need to do curl once */
         if (THERMAL_1_ON_MAIN_BROAD == tid)
         {
-            CURL *curl;
             char url[256] = {0};
+            CURLMcode mc;
+            int still_running = 1;
 
-            snprintf(url, sizeof(url), "https://10.10.10.1:443/api/sys/bmc/tmp/montara");
-
-            curl = curl_easy_init();
-            if (curl) 
-            {
-                curl_easy_setopt(curl, CURLOPT_URL, url);
-                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tmp_call_back);
-                curl_easy_setopt(curl, CURLOPT_USERPWD, "root:0penBmc");
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-                curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-                curl_easy_perform(curl);
-                /* always cleanup */
-                curl_easy_cleanup(curl);
-            } 
-            else 
-            {
-                AIM_LOG_ERROR("Unable to reaf data from bmc(%s)\r\n", url);
-                return ONLP_STATUS_E_INTERNAL;
+            snprintf(url, sizeof(url),"%s""tmp/montara", BMC_CURL_PREFIX);
+            /* Just need to do curl once for Thermal 1-6 */
+            curl_easy_setopt(curl[CURL_THERMAL], CURLOPT_URL, url);
+            curl_easy_setopt(curl[CURL_THERMAL], CURLOPT_WRITEFUNCTION, tmp_call_back);
+            curl_multi_add_handle(multi_curl, curl[CURL_THERMAL]);
+            while(still_running) {
+                mc = curl_multi_perform(multi_curl, &still_running);
+                if(mc != CURLM_OK)
+                {
+                    AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+                }
             }
         }
         /* In case of error */

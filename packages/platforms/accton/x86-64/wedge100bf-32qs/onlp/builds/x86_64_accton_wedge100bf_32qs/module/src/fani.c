@@ -43,7 +43,6 @@ enum fan_id {
     FAN_5_ON_FAN_BOARD,
 };
 
-
 #define CHASSIS_FAN_INFO(fid)        \
     { \
         { ONLP_FAN_ID_CREATE(FAN_##fid##_ON_FAN_BOARD), "Chassis Fan - "#fid, 0 },\
@@ -126,31 +125,28 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
 {
     int fid;
     int front_fan_speed = 0, read_fan_speed = 0;
-    CURL *curl;
     char url[256] = {0};
+    int curlid = 0;
+    int still_running = 1;
+    CURLMcode mc;
 
     VALIDATE(id);
     fid = ONLP_OID_ID_GET(id);
     *info = finfo[fid];
 
-    snprintf(url, sizeof(url), "https://10.10.10.1:443/api/sys/bmc/fan/get/%d", fid);
+    snprintf(url, sizeof(url),"%s""fan/get/%d", BMC_CURL_PREFIX, fid);
 
-    curl = curl_easy_init();
-    if (curl) 
-    {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fan_call_back);
-        curl_easy_setopt(curl, CURLOPT_USERPWD, "root:0penBmc");
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-    } 
-    else 
-    {
-        AIM_LOG_ERROR("Unable to reaf data from bmc(%s)\r\n", url);
-        return ONLP_STATUS_E_INTERNAL;
+    curlid = CURL_FAN_STATUS_1 + fid -1;
+
+    curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+    curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, fan_call_back);
+    curl_multi_add_handle(multi_curl, curl[curlid]);
+    while(still_running) {
+        mc = curl_multi_perform(multi_curl, &still_running);
+        if(mc != CURLM_OK)
+        {
+            AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+        }
     }
 
     /* In case of error */
@@ -181,7 +177,7 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
     }
     /* get speed percentage */
     info->percentage = farr[4];
-    /* set fan direction */
+    /* set fan direction need to check */
     info->status |= ONLP_FAN_STATUS_F2B;
 
     return ONLP_STATUS_OK;
@@ -251,5 +247,4 @@ onlp_fani_ioctl(onlp_oid_t id, va_list vargs)
 {
     return ONLP_STATUS_E_UNSUPPORTED;
 }
-
 
