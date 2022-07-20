@@ -125,6 +125,7 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
 {
     int fid;
     int front_fan_speed = 0, read_fan_speed = 0;
+    int fan_present = 0;
     char url[256] = {0};
     int curlid = 0;
     int still_running = 1;
@@ -155,7 +156,11 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
         AIM_LOG_ERROR("Error returned from REST API with status %d \n", farr[0]);
         return ONLP_STATUS_E_INTERNAL;
     }
-    /* fan present need to check */
+
+    fan_present = farr[5];
+    if (1 == fan_present) {
+        return ONLP_STATUS_OK; /* fan is not present */
+    }
     info->status |= ONLP_FAN_STATUS_PRESENT;
     /* get front fan rpm */
     front_fan_speed = farr[2];
@@ -177,7 +182,7 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
     }
     /* get speed percentage */
     info->percentage = farr[4];
-    /* set fan direction need to check */
+    /* set fan direction */
     info->status |= ONLP_FAN_STATUS_F2B;
 
     return ONLP_STATUS_OK;
