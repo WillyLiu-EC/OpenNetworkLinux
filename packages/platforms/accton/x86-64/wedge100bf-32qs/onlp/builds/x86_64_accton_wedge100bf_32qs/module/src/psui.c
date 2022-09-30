@@ -37,8 +37,6 @@
         }                                       \
     } while(0)
 
-#define PSU1_ID 1
-#define PSU2_ID 2
 #define PSU_PRESENT true
 #define PSU_ABSCENT false
 #define PSU_PRESENT_LOCATION 48
@@ -277,6 +275,9 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     /* Get vout */
     info->mvout = ps[2] * 1000;
     info->caps |= ONLP_PSU_CAPS_VOUT;
+
+    info->hdr.coids[0] = ONLP_FAN_ID_CREATE(pid + CHASSIS_FAN_COUNT);
+    info->hdr.coids[1] = ONLP_THERMAL_ID_CREATE(pid + CHASSIS_THERMAL_COUNT);
 
     return ONLP_STATUS_OK;
 }

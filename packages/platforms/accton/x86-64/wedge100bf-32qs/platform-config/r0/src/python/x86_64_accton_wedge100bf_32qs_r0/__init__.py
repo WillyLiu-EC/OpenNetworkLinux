@@ -21,7 +21,9 @@ class OnlPlatform_x86_64_accton_wedge100bf_32qs_r0(OnlPlatformAccton,
 
                 ('24c64', 0x50, 40),
                 ])
-                
+
+        # initialize pca9548 idle_state in kernel 5.4.40 version
+        subprocess.call('echo -2 | tee /sys/bus/i2c/drivers/pca954x/*-00*/idle_state > /dev/null', shell=True)
         # Initialize QSFP devices
         self.new_i2c_device('optoe1', 0x50, 2)
         self.new_i2c_device('optoe1', 0x50, 3)

@@ -48,8 +48,13 @@
 #define CHASSIS_LED_COUNT     2
 #define CHASSIS_PSU_COUNT     2
 
+#define PSU1_ID 1
+#define PSU2_ID 2
+#define MAX_PSU_FAN_SPEED 23000
+
 #define IDPROM_PATH "/sys/class/i2c-adapter/i2c-40/40-0050/eeprom"
 #define BMC_CURL_PREFIX "https://[fe80::ff:fe00:1%usb0]:443/api/sys/bmc/"
+#define BMC_CPLD_CURL_PREFIX "https://[fe80::1%usb0]:443/api/sys/cpldget/"
 
 enum onlp_thermal_id
 {
@@ -61,9 +66,21 @@ enum onlp_thermal_id
     THERMAL_4_ON_MAIN_BROAD,
     THERMAL_5_ON_MAIN_BROAD,
     THERMAL_6_ON_MAIN_BROAD,
+    THERMAL_ON_PSU1,
+    THERMAL_ON_PSU2
 };
 
-#define HANDLECOUNT 10
+enum fan_id {
+    FAN_1_ON_FAN_BOARD = 1,
+    FAN_2_ON_FAN_BOARD,
+    FAN_3_ON_FAN_BOARD,
+    FAN_4_ON_FAN_BOARD,
+    FAN_5_ON_FAN_BOARD,
+    FAN_ON_PSU_1,
+    FAN_ON_PSU_2
+};
+
+#define HANDLECOUNT 16
 enum curl_id
 {
     CURL_THERMAL = 0,
@@ -76,6 +93,12 @@ enum curl_id
     CURL_FAN_STATUS_3,
     CURL_FAN_STATUS_4,
     CURL_FAN_STATUS_5,
+    CURL_PSU_1_THERMAL,
+    CURL_PSU_2_THERMAL,
+    CURL_PSU_1_FAN,
+    CURL_PSU_2_FAN,
+    CURL_SYS_CPLD,
+    CURL_FAN_CPLD
 };
 CURL *curl[HANDLECOUNT];
 CURLM *multi_curl;

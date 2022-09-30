@@ -37,6 +37,132 @@
 #include "x86_64_accton_wedge100bf_32qs_int.h"
 #include "x86_64_accton_wedge100bf_32qs_log.h"
 
+typedef struct cpld_version
+{
+    char *attr_name;
+    int   major_version;
+    int   sub_version;
+    char *description;
+} cpld_version_t;
+
+static int sys_ver[2];
+static int fan_ver[2];
+
+static void sys_cpld_ver_call_back(void *p)
+{
+    char str[2];
+    char *loc[2];
+    int ver_char[2];
+    int i, j;
+    const char *cpld_reg[2]= {"0x01", "0x02"};
+
+    const char *ptr = (const char *)p;
+
+    if (ptr == NULL)
+    {
+        AIM_LOG_ERROR("NULL POINTER PASSED to call back function\n");
+
+        return;
+    }
+
+    for(i = 0; i < 2; i++)
+    {
+        loc[i] = strstr(ptr, cpld_reg[i]);
+        if(loc[i] == NULL)
+        {
+            AIM_LOG_ERROR("no version found!\n");
+
+            return;
+        }
+
+        str[0] = loc[i][8];
+        str[1] = loc[i][9];
+        str[2] = '\0';
+
+        for(j = 0 ; j < 2 ; j++)
+        {
+            ver_char[j] = (int)(str[j]);
+            /* ASCII */
+            if (ver_char[j] == 97)
+                ver_char[j] = 10;
+            else if(ver_char[j] == 98)
+                ver_char[j] = 11; 
+            else if (ver_char[j] == 99)
+                ver_char[j] = 12;
+            else if(ver_char[j] == 100)
+                ver_char[j] = 13; 
+            else if (ver_char[j] == 101)
+                ver_char[j] = 14;
+            else if(ver_char[j] == 102)
+                ver_char[j] = 15; 
+            else
+                ver_char[j] = (int)(str[j]) - 48;
+        }
+
+        sys_ver[i] = ver_char[0]*16 + ver_char[1];
+    }
+
+    return;
+}
+
+static void fan_cpld_ver_call_back(void *p)
+{
+    char str[2];
+    char *loc[2];
+    int ver_char[2];
+    int i, j;
+    const char *cpld_reg[2]= {"0x01", "0x02"};
+
+    const char *ptr = (const char *)p;
+
+    if (ptr == NULL)
+    {
+        AIM_LOG_ERROR("NULL POINTER PASSED to call back function\n");
+
+        return;
+    }
+
+    for(i = 0; i < 2; i++)
+    {
+        loc[i] = strstr(ptr, cpld_reg[i]);
+        if(loc[i] == NULL)
+        {
+            AIM_LOG_ERROR("no version found!\n");
+
+            return;
+        }
+
+        str[0] = loc[i][8];
+        str[1] = loc[i][9];
+        str[2] = '\0';
+
+        for(j = 0 ; j < 2 ; j++)
+        {
+            ver_char[j] = (int)(str[j]);
+            /* ASCII */
+            if (ver_char[j] == 97)
+                ver_char[j] = 10;
+            else if(ver_char[j] == 98)
+                ver_char[j] = 11; 
+            else if (ver_char[j] == 99)
+                ver_char[j] = 12;
+            else if(ver_char[j] == 100)
+                ver_char[j] = 13; 
+            else if (ver_char[j] == 101)
+                ver_char[j] = 14;
+            else if(ver_char[j] == 102)
+                ver_char[j] = 15; 
+            else
+                ver_char[j] = (int)(str[j]) - 48;
+        }
+
+        fan_ver[i] = ver_char[0]*16 + ver_char[1];
+    }
+
+    return;
+}
+
+
 const char*
 onlp_sysi_platform_get(void)
 {
@@ -66,7 +192,7 @@ onlp_sysi_oids_get(onlp_oid_t* table, int max)
     onlp_oid_t* e = table;
     memset(table, 0, max*sizeof(onlp_oid_t));
 
-    /* 8 Thermal sensors on the chassis */
+    /* 9 Thermal sensors on the chassis */
     for (i = 1; i <= CHASSIS_THERMAL_COUNT; i++) {
         *e++ = ONLP_THERMAL_ID_CREATE(i);
     }
@@ -91,23 +217,46 @@ onlp_sysi_oids_get(onlp_oid_t* table, int max)
 int
 onlp_sysi_platform_info_get(onlp_platform_info_t* pi)
 {
-    #if 0
-    int sys_cpld;
-    int fan_cpld;
+    int curlid;
+    char url[256] = {0};
+    CURLMcode mc;
+    int still_running = 1;
 
-    bmc_tty_init();
+    cpld_version_t cplds[] = { { "sys_cpld_ver", 0, 0, "SYSTEM CPLD"},
+                               { "fan_cpld_ver", 0, 0, "FAN CPLD"} };
+    
+    snprintf(url, sizeof(url),"%s""0x31/*", BMC_CPLD_CURL_PREFIX);
 
-    if (bmc_file_read_int(&sys_cpld, SYS_CPLD_VERSION_PATH, 16) < 0) {
-        AIM_LOG_ERROR("Unable to read status from file (%s)\r\n", SYS_CPLD_VERSION_PATH);
-        return ONLP_STATUS_E_INTERNAL;
+    curlid = CURL_SYS_CPLD;
+    curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+    curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, sys_cpld_ver_call_back);
+    curl_multi_add_handle(multi_curl, curl[curlid]);
+
+    snprintf(url, sizeof(url),"%s""0x33/*", BMC_CPLD_CURL_PREFIX);
+
+    curlid = CURL_FAN_CPLD;
+    curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+    curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, fan_cpld_ver_call_back);
+    curl_multi_add_handle(multi_curl, curl[curlid]);
+
+    while(still_running) {
+         mc = curl_multi_perform(multi_curl, &still_running);
+        if(mc != CURLM_OK)
+        {
+            AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+        }
     }
 
-    if (bmc_file_read_int(&fan_cpld, FAN_CPLD_VERSION_PATH, 16) < 0) {
-        AIM_LOG_ERROR("Unable to read status from file (%s)\r\n", FAN_CPLD_VERSION_PATH);
-        return ONLP_STATUS_E_INTERNAL;
-    }   
-    pi->cpld_versions = aim_fstrdup("System CPLD : %d, FAN CPLD : %d", sys_cpld, fan_cpld);
-    #endif
+    /* Read CPLD version */
+    cplds[0].major_version=sys_ver[0];
+    cplds[0].sub_version=sys_ver[1];  
+    cplds[1].major_version=fan_ver[0];
+    cplds[1].sub_version=fan_ver[1];
+
+    pi->cpld_versions = aim_fstrdup("%s:%x.%x, %s:%x.%x", 
+                                    cplds[0].description, cplds[0].major_version, cplds[0].sub_version,
+                                    cplds[1].description, cplds[1].major_version, cplds[1].sub_version);
+
     return ONLP_STATUS_OK;
 }
 
