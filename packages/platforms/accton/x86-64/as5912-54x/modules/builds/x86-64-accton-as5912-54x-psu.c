@@ -117,7 +117,7 @@ static ssize_t show_model_name(struct device *dev, struct device_attribute *da,
 	}
 
     mutex_unlock(&data->update_lock);
-    return sprintf(buf, "%s\n", data->model_name);
+    return sprintf(buf, "%s", data->model_name);
 }
 
 static const struct attribute_group as5912_54x_psu_group = {
@@ -268,7 +268,6 @@ static struct as5912_54x_psu_data *as5912_54x_psu_update_device(struct device *d
         if (power_good) {
             status = as5912_54x_psu_read_block(client, 0x20, data->model_name, 
                                                ARRAY_SIZE(data->model_name)-1);
-
             if (status < 0) {
                 data->model_name[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
