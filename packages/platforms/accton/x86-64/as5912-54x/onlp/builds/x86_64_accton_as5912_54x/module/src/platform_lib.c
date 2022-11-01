@@ -122,6 +122,7 @@ int onlp_file_read_string(char *filename, char *buffer, int buf_size, int data_l
     return ret;
 }
 
+#define PSU_PRODUCT_NAME_LEN 11
 #define PSU_MODEL_NAME_LEN 9
 #define PSU_FAN_DIR_LEN    3
 
@@ -130,11 +131,11 @@ psu_type_t get_psu_type(int id, char* modelname, int modelname_len)
     int   ret = 0;
     char *node = NULL;
     char  model_name[PSU_MODEL_NAME_LEN + 1] = {0};
+    char  product_name[PSU_PRODUCT_NAME_LEN + 1] = {0};
     psu_type_t ptype = PSU_TYPE_UNKNOWN;
     
     /* Check AC model name */
     node = (id == PSU1_ID) ? PSU1_AC_HWMON_NODE(psu_model_name) : PSU2_AC_HWMON_NODE(psu_model_name);
-    memset(model_name, 0x0, PSU_MODEL_NAME_LEN + 1);
     memset(modelname, 0x0, modelname_len);
     if (onlp_file_read_string(node, model_name, sizeof(model_name), 0) != 0) {
         return PSU_TYPE_UNKNOWN;
@@ -195,9 +196,13 @@ psu_type_t get_psu_type(int id, char* modelname, int modelname_len)
 
     if (strncmp(model_name, "D650AB11", strlen("D650AB11")) == 0)
     {
+        if (onlp_file_read_string(node, product_name, sizeof(product_name), 0) != 0) {
+            return PSU_TYPE_UNKNOWN;
+        }
+
         if (modelname)
         {
-            aim_strlcpy(modelname, model_name, sizeof(model_name));
+            aim_strlcpy(modelname, product_name, sizeof(product_name));
         }
 
         char *fan_str = NULL;

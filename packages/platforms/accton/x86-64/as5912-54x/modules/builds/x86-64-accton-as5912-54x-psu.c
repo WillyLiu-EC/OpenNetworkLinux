@@ -53,6 +53,7 @@ struct as5912_54x_psu_data {
     u8  index;           /* PSU index */
     u8  status;          /* Status(present/power_good) register read from CPLD */
     char model_name[9]; /* Model name, read from eeprom */
+    char product_name[11]; /* Product name, read from eeprom */
 };
 
 static struct as5912_54x_psu_data *as5912_54x_psu_update_device(struct device *dev);             
@@ -117,6 +118,10 @@ static ssize_t show_model_name(struct device *dev, struct device_attribute *da,
 	}
 
     mutex_unlock(&data->update_lock);
+
+    if(!(strcmp(data->model_name, "D650AB11")))
+        return sprintf(buf, "%s", data->product_name);
+
     return sprintf(buf, "%s", data->model_name);
 }
 
@@ -274,6 +279,15 @@ static struct as5912_54x_psu_data *as5912_54x_psu_update_device(struct device *d
             }
             else {
                 data->model_name[ARRAY_SIZE(data->model_name)-1] = '\0';
+
+                status = as5912_54x_psu_read_block(client, 0x15, data->product_name,
+                                                       ARRAY_SIZE(data->product_name)-1);
+                if (status < 0)
+                {
+                    data->model_name[0] = '\0';
+                    dev_dbg(&client->dev, "unable to read product name from (0x%x)\n", client->addr);
+                }
+                data->product_name[ARRAY_SIZE(data->product_name)-1] = '\0';
             }
         }
         
