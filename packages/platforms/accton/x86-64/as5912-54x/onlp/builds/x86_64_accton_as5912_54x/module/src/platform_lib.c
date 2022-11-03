@@ -196,6 +196,8 @@ psu_type_t get_psu_type(int id, char* modelname, int modelname_len)
 
     if (strncmp(model_name, "D650AB11", strlen("D650AB11")) == 0)
     {
+        /* Check product name */
+        node = (id == PSU1_ID) ? PSU1_AC_HWMON_NODE(psu_product_name) : PSU2_AC_HWMON_NODE(psu_product_name);
         if (onlp_file_read_string(node, product_name, sizeof(product_name), 0) != 0) {
             return PSU_TYPE_UNKNOWN;
         }
