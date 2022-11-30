@@ -53,8 +53,7 @@ static const int sfp_bus_index[] = {
 int
 onlp_sfpi_init(void)
 {
-    /* Called at initialization time */    
-    return bmc_tty_init();
+    return ONLP_STATUS_OK;
 }
 
 int
