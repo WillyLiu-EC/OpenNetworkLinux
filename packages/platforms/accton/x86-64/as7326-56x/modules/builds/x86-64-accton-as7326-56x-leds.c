@@ -283,7 +283,7 @@ static void accton_as7326_56x_led_loc_set(struct led_classdev *led_cdev,
 static enum led_brightness accton_as7326_56x_led_loc_get(struct led_classdev *cdev)
 {
     accton_as7326_56x_led_update();
-    return led_reg_val_to_light_mode(LED_TYPE_LOC, ledctl->reg_val[0]);
+    return led_reg_val_to_light_mode(LED_TYPE_LOC, ledctl->reg_val[1]);
 }
 
 static void accton_as7326_56x_led_auto_set(struct led_classdev *led_cdev,
