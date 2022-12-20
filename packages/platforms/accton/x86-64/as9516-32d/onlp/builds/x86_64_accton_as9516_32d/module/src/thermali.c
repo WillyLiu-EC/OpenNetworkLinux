@@ -26,6 +26,7 @@
 #include <onlplib/file.h>
 #include <onlp/platformi/thermali.h>
 #include "platform_lib.h"
+#include <curl/curl.h>
 
 #define VALIDATE(_id)                           \
     do {                                        \
@@ -34,55 +35,195 @@
         }                                       \
     } while(0)
 
-#define THERMAL_PATH_FORMAT "/sys/bus/i2c/drivers/lm75/%s/temp1_input"
-#define THERMAL_CPU_CORE_PATH_FORMAT "/sys/bus/i2c/drivers/com_e_driver/%s/temp2_input"
+static uint32_t tmp[TMP_NUM_ELE] = {0};
+static uint32_t ps[PS_NUM_ELE];
 
-static char* directory[] =  /* must map with onlp_thermal_id */
-{
-    NULL,
-    "4-0033",
-    "3-0048",
-    "3-0049",
-    "3-004a",
-    "3-004b",
-    "3-004c",
-    "3-004d",
+static int curl_thermal_data_loc[9] = 
+{   
+    /* CPU temp */
+    curl_data_loc_thermal_4_33_cpu,
+    /* memory temp */
+    curl_data_loc_thermal_4_33_memory,
+    /* 3-0048 tmp75_3_48_temp */
+    curl_data_loc_thermal_3_48,
+    /* 3-0049 tmp75_3_49_temp */
+    curl_data_loc_thermal_3_49,
+    /* 3-004a tmp75_3_4a_temp */
+    curl_data_loc_thermal_3_4a,
+    /* 3-004b tmp75_3_4b_temp */
+    curl_data_loc_thermal_3_4b,
+    /* 3-004c tmp75_3_4c_temp Max6658 */
+    curl_data_loc_thermal_3_4c_max6658,
+    /* 3-004c tmp75_3_4c_temp Tofino */
+    curl_data_loc_thermal_3_4c_tofino,
+    /* 3-004d tmp75_3_4d_temp */
+    curl_data_loc_thermal_3_4d
 };
 
 /* Static values */
 static onlp_thermal_info_t linfo[] =
 {
     { }, /* Not used */
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_CPU_CORE), "CPU Core", 0},
-            ONLP_THERMAL_STATUS_PRESENT,
-            ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
-    },    
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BROAD), "TMP75-1", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_CPU_CORE), "COM_E 0x33 CPU", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BROAD), "TMP75-2", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_MEMORY), "COM_E 0x33 Memory", 0},
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
+    },  
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BROAD), "TMP75 0x48", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BROAD), "TMP75-3", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BROAD), "TMP75 0x49", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BROAD), "TMP75-4", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BROAD), "TMP75 0x4a", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BROAD), "MAX6658 Temp Sensor(JBAY)", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BROAD), "TMP75 0x4b", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "TMP75-5", 0},
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BROAD), "MAX6658 0x4c", 0},
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "MAX6658 0x4c Tofino", 0},
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_7_ON_MAIN_BROAD), "TMP75 0x4d", 0},
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL1_ON_PSU1), "PSU1 Ambient", ONLP_PSU_ID_CREATE(PSU1_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL2_ON_PSU1), "PSU1 Hotspot", ONLP_PSU_ID_CREATE(PSU1_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL1_ON_PSU2), "PSU2 Ambient", ONLP_PSU_ID_CREATE(PSU2_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL2_ON_PSU2), "PSU2 Hotspot", ONLP_PSU_ID_CREATE(PSU2_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+
 };
 
+void tmp_call_back(void *p) 
+{
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    char str[40];
+    char *ptr = p;
+
+    if (ptr == NULL)
+    {
+        AIM_LOG_ERROR("NULL POINTER PASSED to call back function\n");
+        return;
+    }
+
+    for (i = 0; i < TMP_NUM_ELE; i++)
+        tmp[i] = -1;
+
+    i = CURL_IGNORE_OFFSET;
+    while (ptr[i] && ptr[i] != '[')
+    {
+        i++;
+    }
+
+    if (!ptr[i])
+    {
+        AIM_LOG_ERROR("NULL POINTER PASSED to call back function\n");
+        return;
+    }
+
+    i++;
+    while (ptr[i] && ptr[i] != ']')
+    {
+        j = 0;
+        while (ptr[i] != ',' && ptr[i] != ']')
+        {
+            str[j] = ptr[i];
+            j++;
+            i++;
+        }
+        str[j] = '\0';
+        tmp[k] = atoi(str);
+        k++;
+        if (ptr[i] == ']') break;
+        i++;
+    }
+
+    return;
+}
+
+static void ps_call_back(void *p)
+{
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    char str[32];
+    const char *ptr = (const char *)p;
+
+    if (ptr == NULL)
+    {
+        AIM_LOG_ERROR("NULL POINTER PASSED to call back function\n");
+        return;
+    }
+
+    for (i = 0; i < PS_NUM_ELE; i++)
+        ps[i] = 0;
+
+    i = CURL_IGNORE_OFFSET;
+    while (ptr[i] && ptr[i] != '[') {
+        i++;
+    }
+
+    if (!ptr[i])
+    {
+        AIM_LOG_ERROR("FAILED : NULL POINTER\n");
+        return;
+    }
+
+    i++;
+    while (ptr[i] && ptr[i] != ']') 
+    {
+        j = 0;
+        while (ptr[i] != ',' && ptr[i] != ']') 
+        {
+            str[j] = ptr[i];
+            j++;
+            i++;
+        }
+        if (j >= PS_DESC_LEN) 
+        { /* sanity check */
+            AIM_LOG_ERROR("bad string len from BMC i %d j %d k %d 0x%02x\n", i, j, k, ptr[i]);
+            return;
+        }
+        str[j] = '\0';
+        if ((k < 11) || (k > 13))
+        {
+            ps[k] = atoi(str);
+        } 
+
+        k++;
+        if (ptr[i] == ']') break;
+        i++;
+    }
+
+    return;
+}
 /*
  * This will be called to intiialize the thermali subsystem.
  */
@@ -106,22 +247,78 @@ int
 onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
 {
     int   tid;
-    char  path[64] = {0};
     VALIDATE(id);
+    char url[256] = {0};
+    int curlid = 0;
+    CURLMcode mc;
+    int still_running = 1;
     
     tid = ONLP_OID_ID_GET(id);
     /* Set the onlp_oid_hdr_t and capabilities */
     *info = linfo[tid];
-    /* bmc access path */
-    if (THERMAL_CPU_CORE == tid) {
-        sprintf(path, THERMAL_CPU_CORE_PATH_FORMAT, directory[tid]);
-    }else {
-        sprintf(path, THERMAL_PATH_FORMAT, directory[tid]);
+    /* just need to do curl once 
+      tmp[0] response_status [0:success ,!=0:error],
+      tmp[1] temp1_input  in 3-0048
+      tmp[2] temp1_input  in 3-0049
+      tmp[3] temp1_input in 3-004a
+      tmp[4] temp1_input in 3-004b 
+      tmp[5] temp1_input in 3-004c max6658 thermal sensor ,temperature in local position
+      tmp[6] temp2_input in 3-004c max6658 temp2 is temperature for Tofino chip.
+      tmp[7] temp1_input in 3-004d 
+      tmp[8] temp1_input in 4-0033 com-e module ,  DDR temperature
+      tmp[9] temp2_input in 4-0033 com-e module ,  CPU temperature
+    */
+    if (THERMAL_CPU_CORE == tid)
+    {
+        snprintf(url, sizeof(url),"%s""tmp/newport", BMC_CURL_PREFIX);
+        /* Just need to do curl once for Thermal 1-6 */
+        curl_easy_setopt(curl[CURL_THERMAL], CURLOPT_URL, url);
+        curl_easy_setopt(curl[CURL_THERMAL], CURLOPT_WRITEFUNCTION, tmp_call_back);
+        curl_multi_add_handle(multi_curl, curl[CURL_THERMAL]);
+        while(still_running) {
+            mc = curl_multi_perform(multi_curl, &still_running);
+            if(mc != CURLM_OK)
+            {
+                AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+            }
+        }
+
+        info->mcelsius = tmp[curl_data_loc_thermal_4_33_cpu]*100;
     }
-    
-    if (bmc_file_read_int(&info->mcelsius, path, 10) < 0) {
-        AIM_LOG_ERROR("Unable to read status from file (%s)\r\n", path);
-        return ONLP_STATUS_E_INTERNAL;
+    else if ((THERMAL1_ON_PSU1 == tid) || ( THERMAL2_ON_PSU1 == tid)
+                || ( THERMAL1_ON_PSU2 == tid) || ( THERMAL2_ON_PSU2 == tid))
+    {
+        /* Get psu status by curl */
+        if ((THERMAL1_ON_PSU1 == tid) || ( THERMAL2_ON_PSU1 == tid))
+        {
+            snprintf(url, sizeof(url),"%s""ps/1", BMC_CURL_PREFIX);
+            curlid = CURL_PSU_1_THERMAL;
+        }
+        else
+        {
+            snprintf(url, sizeof(url),"%s""ps/2", BMC_CURL_PREFIX);
+            curlid = CURL_PSU_2_THERMAL;
+        }
+
+        curl_easy_setopt(curl[curlid], CURLOPT_URL, url);
+        curl_easy_setopt(curl[curlid], CURLOPT_WRITEFUNCTION, ps_call_back);
+        curl_multi_add_handle(multi_curl, curl[curlid]);
+
+        while(still_running) {
+            mc = curl_multi_perform(multi_curl, &still_running);
+            if(mc != CURLM_OK)
+            {
+                AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
+            }
+        }
+        if ((THERMAL1_ON_PSU1 == tid) || ( THERMAL1_ON_PSU2 == tid))
+            info->mcelsius = ps[curl_data_loc_psu_ambient]*1000;
+        else
+            info->mcelsius = ps[curl_data_loc_psu_hotspot]*1000;
+    }
+    else
+    {
+        info->mcelsius = tmp[curl_thermal_data_loc[tid-1]]*100;
     }
 
     return ONLP_STATUS_OK;
