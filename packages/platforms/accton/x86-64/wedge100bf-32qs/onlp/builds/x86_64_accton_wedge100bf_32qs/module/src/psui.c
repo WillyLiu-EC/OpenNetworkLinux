@@ -37,10 +37,6 @@
         }                                       \
     } while(0)
 
-#define PSU_PRESENT true
-#define PSU_ABSCENT false
-#define PSU_PRESENT_LOCATION 48
-#define PSU_STATUS_POWER_GOOD 1
 /* 14 Number of elements passed by BMC REST API. It includes error and data */
 #define PS_NUM_ELE 16
 #define PS_DESC_LEN 32
@@ -78,13 +74,6 @@ static void ps_presence_call_back(void *p)
     int i = 0;
     char *ptr = p;
     ps_presence = PSU_ABSCENT;
-
-    i = 0;
-
-    while (ptr[i] && ptr[i] != '[')
-    {
-        i++;
-    }
 
     if (!ptr[i])
     {
@@ -126,7 +115,7 @@ static void ps_call_back(void *p)
     for (i = 0; i < PS_NUM_ELE; i++)
         ps[i] = 0;
 
-    i = 0;
+    i = CURL_IGNORE_OFFSET;
     while (ptr[i] && ptr[i] != '[') {
         i++;
     }
@@ -153,7 +142,7 @@ static void ps_call_back(void *p)
             return;
         }
         str[j] = '\0';
-        if ((k < 11) || (k > 13))
+        if ((k < 9) || (k > 11))
         {
             ps[k] = atoi(str);
         } 
@@ -161,13 +150,13 @@ static void ps_call_back(void *p)
         {
             switch (k) 
             {
-                case 11:
+                case 9:
                     strncpy(ps_model, str, sizeof(ps_model));
                     break;
-                case 12:
+                case 10:
                     strncpy(ps_serial, str, sizeof(ps_serial));
                     break;
-                case 13:
+                case 11:
                     strncpy(ps_rev, str, sizeof(ps_rev));
                     break;
             }
@@ -251,33 +240,34 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     /* Get serial number */
     strncpy(info->serial, serial, sizeof(info->serial));
     /* Get power good status */
-    power_good = ps[14];
+    power_good = ps[curl_data_loc_psu_poower_good];
 
     if (PSU_STATUS_POWER_GOOD != power_good) 
     {
         info->status |= ONLP_PSU_STATUS_FAILED;
     }
     /* Read vin */
-    info->mvin = ps[1] * 1000;
+    info->mvin = ps[curl_data_loc_psu_vin] * 1000;
     info->caps |= ONLP_PSU_CAPS_VIN;
-    /* Read iin - need to check */
-    info->miin = ps[3];
+    /* Read iin */
+    info->miin = ps[curl_data_loc_psu_iin];
     info->caps |= ONLP_PSU_CAPS_IIN;
-    /* Get pin - need to check */
-    info->mpin = ps[4];
+    /* Get pin */
+    info->mpin = ps[curl_data_loc_psu_pin];
     info->caps |= ONLP_PSU_CAPS_PIN;
-    /* Read iout - need to check*/
-    info->miout = ps[16];
+    /* Read iout */
+    info->miout = ps[curl_data_loc_psu_iout];
     info->caps |= ONLP_PSU_CAPS_IOUT;
     /* Read pout */
-    info->mpout = ps[15];
+    info->mpout = ps[curl_data_loc_psu_pout];
     info->caps |= ONLP_PSU_CAPS_POUT;
     /* Get vout */
-    info->mvout = ps[2] * 1000;
+    info->mvout = ps[curl_data_loc_psu_vout] * 1000;
     info->caps |= ONLP_PSU_CAPS_VOUT;
 
     info->hdr.coids[0] = ONLP_FAN_ID_CREATE(pid + CHASSIS_FAN_COUNT);
-    info->hdr.coids[1] = ONLP_THERMAL_ID_CREATE(pid + CHASSIS_THERMAL_COUNT);
+    info->hdr.coids[1] = ONLP_THERMAL_ID_CREATE((pid*2 - 1) + CHASSIS_THERMAL_COUNT);
+    info->hdr.coids[2] = ONLP_THERMAL_ID_CREATE((pid*2) + CHASSIS_THERMAL_COUNT);
 
     return ONLP_STATUS_OK;
 }

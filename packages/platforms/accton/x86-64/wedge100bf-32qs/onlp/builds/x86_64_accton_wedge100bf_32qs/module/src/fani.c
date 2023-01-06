@@ -93,7 +93,7 @@ void fan_call_back(void *p)
         farr[i] = 0;
     }
 
-    i = 0;
+    i = CURL_IGNORE_OFFSET;
     while (ptr[i] && ptr[i] != '[') {
         i++;
     }
@@ -139,7 +139,7 @@ static void ps_call_back(void *p)
     for (i = 0; i < PS_NUM_ELE; i++)
         ps[i] = 0;
 
-    i = 0;
+    i = CURL_IGNORE_OFFSET;
     while (ptr[i] && ptr[i] != '[') {
         i++;
     }

@@ -35,58 +35,87 @@
         }                                       \
     } while(0)
 
-#define TMP_NUM_ELE 7
+#define TMP_NUM_ELE 9
 static int tmp[TMP_NUM_ELE] = {0};
 
 #define PS_NUM_ELE 16
 #define PS_DESC_LEN 32
 static uint32_t ps[PS_NUM_ELE];
 
-static char* cpu_coretemp_files[] =
-{
-        "/sys/devices/platform/coretemp.0*temp1_input",
-        "/sys/devices/platform/coretemp.0*temp2_input",
-        "/sys/devices/platform/coretemp.0*temp3_input",
-        "/sys/devices/platform/coretemp.0*temp4_input",
-        "/sys/devices/platform/coretemp.0*temp5_input",
-        NULL,
+static int curl_thermal_data_loc[9] = 
+{   
+    /* CPU temp */
+    curl_data_loc_thermal_4_33_cpu,
+    /* memory temp */
+    curl_data_loc_thermal_4_33_memory,
+    /* 3-0048 tmp75_3_48_temp */
+    curl_data_loc_thermal_3_48,
+    /* 3-0049 tmp75_3_49_temp */
+    curl_data_loc_thermal_3_49,
+    /* 3-004a tmp75_3_4a_temp */
+    curl_data_loc_thermal_3_4a,
+    /* 3-004b tmp75_3_4b_temp */
+    curl_data_loc_thermal_3_4b,
+    /* 3-004c tmp75_3_4c_temp Max6658 */
+    curl_data_loc_thermal_3_4c_max6658,
+    /* 3-004c tmp75_3_4c_temp Tofino Fan Ctrl */
+    curl_data_loc_thermal_3_4c_tofino,
+    /* 3-004d tmp75_3_4d_temp */
+    curl_data_loc_thermal_3_4d
 };
+
 /* Static values */
 static onlp_thermal_info_t linfo[] = {
     { }, /* Not used */
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_CPU_CORE), "CPU Core", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_CPU_CORE), "com_e_driver-i2c-4-33 CPU", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {97200, 102600, 108000}
-    },    
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BROAD), "TMP75-1", 0}, 
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_MEMORY), "com_e_driver-i2c-4-33 Memory", 0}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {76500, 80750, 85000}
+    },  
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BROAD), "tmp75-i2c-3-48", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {72000, 76000, 80000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BROAD), "TMP75-2", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BROAD), "tmp75-i2c-3-49", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {54000, 57000, 60000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BROAD), "TMP75-3", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BROAD), "tmp75-i2c-3-4a", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {54000, 57000, 60000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BROAD), "TMP75-4", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BROAD), "tmp75-i2c-3-4b", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {54000, 57000, 60000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BROAD), "TMP75-5", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BROAD), "max6658-i2c-3-4c Max6658", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
-            ONLP_THERMAL_CAPS_ALL, 0, {945000, 997500, 105000}
+            ONLP_THERMAL_CAPS_ALL, 0, {90000, 95000, 100000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "TMP75-6", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "max6658-i2c-3-4c Tofino Fan Ctrl", 0}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {94500, 99750, 105000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_7_ON_MAIN_BROAD), "tmp75-i2c-3-4d", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {54000, 57000, 60000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_ON_PSU1), "PSU-1 Thermal Sensor", ONLP_PSU_ID_CREATE(PSU1_ID)}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL1_ON_PSU1), "PSU1 Ambient", ONLP_PSU_ID_CREATE(PSU1_ID)}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_ON_PSU2), "PSU-2 Thermal Sensor", ONLP_PSU_ID_CREATE(PSU2_ID)}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL2_ON_PSU1), "PSU1 Hotspot", ONLP_PSU_ID_CREATE(PSU1_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL1_ON_PSU2), "PSU2 Ambient", ONLP_PSU_ID_CREATE(PSU2_ID)}, 
+            ONLP_THERMAL_STATUS_PRESENT,
+            ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
+    },
+    { { ONLP_THERMAL_ID_CREATE(THERMAL2_ON_PSU2), "PSU2 Hotspot", ONLP_PSU_ID_CREATE(PSU2_ID)}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {100000, 105000, 115000}
     },
@@ -110,7 +139,7 @@ void tmp_call_back(void *p)
     for (i = 0; i < TMP_NUM_ELE; i++)
         tmp[i] = -1;
 
-    i = 0;
+    i = CURL_IGNORE_OFFSET;
 
     while (ptr[i] && ptr[i] != '[')
     {
@@ -160,7 +189,7 @@ static void ps_call_back(void *p)
     for (i = 0; i < PS_NUM_ELE; i++)
         ps[i] = 0;
 
-    i = 0;
+    i = CURL_IGNORE_OFFSET;
     while (ptr[i] && ptr[i] != '[') {
         i++;
     }
@@ -187,7 +216,7 @@ static void ps_call_back(void *p)
             return;
         }
         str[j] = '\0';
-        if ((k < 11) || (k > 13))
+        if ((k < 9) || (k > 11))
         {
             ps[k] = atoi(str);
         } 
@@ -234,14 +263,11 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
     *info = linfo[tid];
     
     /* get path */
-    if (THERMAL_CPU_CORE == tid)
-    {
-        return onlp_file_read_int_max(&info->mcelsius, cpu_coretemp_files);
-    }
-    else if ((THERMAL_ON_PSU1 == tid) || ( THERMAL_ON_PSU2 == tid))
+    if ((THERMAL1_ON_PSU1 == tid) || (THERMAL2_ON_PSU1 == tid) ||
+                (THERMAL1_ON_PSU2 == tid) || (THERMAL2_ON_PSU2 == tid))
     {
         /* Get psu status by curl */
-        if (THERMAL_ON_PSU1 == tid)
+        if ((THERMAL1_ON_PSU1 == tid) || (THERMAL2_ON_PSU1 == tid))
         {
             snprintf(url, sizeof(url),"%s""ps/1", BMC_CURL_PREFIX);
             curlid = CURL_PSU_1_THERMAL;
@@ -263,13 +289,15 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
                 AIM_LOG_ERROR("multi_curl failed, code %d.\n", mc);
             }
         }
-
-        info->mcelsius = ps[10] * 1000;
+        if ((THERMAL1_ON_PSU1 == tid) || (THERMAL1_ON_PSU2 == tid))
+            info->mcelsius = ps[curl_data_loc_psu_thermal_1] * 1000;
+        else
+            info->mcelsius = ps[curl_data_loc_psu_thermal_2] * 1000;
     }
     else 
     {
         /* just need to do curl once */
-        if (THERMAL_1_ON_MAIN_BROAD == tid)
+        if (THERMAL_CPU_CORE == tid)
         {
             snprintf(url, sizeof(url),"%s""tmp/montara", BMC_CURL_PREFIX);
             /* Just need to do curl once for Thermal 1-6 */
@@ -291,8 +319,9 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
             return ONLP_STATUS_E_INTERNAL;
         }
 
-        info->mcelsius = tmp[tid-1]*100;
+        info->mcelsius = tmp[curl_thermal_data_loc[tid-1]]*100;
     }
 
     return ONLP_STATUS_OK;
 }
+

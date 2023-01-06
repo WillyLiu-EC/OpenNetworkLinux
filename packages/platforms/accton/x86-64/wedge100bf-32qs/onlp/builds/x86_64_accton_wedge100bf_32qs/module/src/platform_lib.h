@@ -44,30 +44,81 @@
 #endif
 
 #define CHASSIS_FAN_COUNT     5
-#define CHASSIS_THERMAL_COUNT 7
+#define CHASSIS_THERMAL_COUNT 9
 #define CHASSIS_LED_COUNT     2
 #define CHASSIS_PSU_COUNT     2
 
 #define PSU1_ID 1
 #define PSU2_ID 2
 #define MAX_PSU_FAN_SPEED 23000
+#define PSU_PRESENT true
+#define PSU_ABSCENT false
+#define PSU_PRESENT_LOCATION 65
+#define PSU_STATUS_POWER_GOOD 0
 
 #define IDPROM_PATH "/sys/class/i2c-adapter/i2c-40/40-0050/eeprom"
 #define BMC_CURL_PREFIX "https://[fe80::ff:fe00:1%usb0]:443/api/sys/bmc/"
 #define BMC_CPLD_CURL_PREFIX "https://[fe80::1%usb0]:443/api/sys/cpldget/"
+#define CURL_IGNORE_OFFSET                      17
+/* CURL data status */
+#define curl_data_normal                        0
+#define curl_data_fan_present                   0
+#define curl_data_fan_absent                    1
+/* CURL data location */
+#define curl_data_loc_status                    0
+/* CURL data location - Thermal bus_addr_temp */
+#define curl_data_loc_thermal_3_48              1
+#define curl_data_loc_thermal_3_49              2
+#define curl_data_loc_thermal_3_4a              3
+#define curl_data_loc_thermal_3_4b              4
+#define curl_data_loc_thermal_3_4c_max6658      5
+#define curl_data_loc_thermal_3_4c_tofino       6
+#define curl_data_loc_thermal_3_4d              7
+#define curl_data_loc_thermal_4_33_memory       8
+#define curl_data_loc_thermal_4_33_cpu          9
+/* CURL data location - PSU */
+#define curl_data_loc_psu_vin                   1
+#define curl_data_loc_psu_vout                  2
+#define curl_data_loc_psu_iin                   3
+#define curl_data_loc_psu_pin                   4
+#define curl_data_loc_psu_fan                   5
+#define curl_data_loc_psu_model_name            9
+#define curl_data_loc_psu_mode_serial           10
+#define curl_data_loc_psu_model_ver             11
+#define curl_data_loc_psu_poower_good           12
+#define curl_data_loc_psu_pout                  13
+#define curl_data_loc_psu_iout                  14
+#define curl_data_loc_psu_thermal_1             15
+#define curl_data_loc_psu_thermal_2             16
+/* CURL data location - FAN */
+#define curl_data_loc_fan_front_rpm             2
+#define curl_data_loc_fan_rear_rpm              3
+#define curl_data_loc_fan_pwm                   4
+#define curl_data_loc_fan_present               5
+
+/* CURL data location - CPLD */
+#define version_number                          4
+#define curl_data_loc_cpld_ver_first            50
+#define curl_data_loc_cpld_ver_second           51
+#define curl_data_loc_cpld_subver_first         68
+#define curl_data_loc_cpld_subver_second        69
 
 enum onlp_thermal_id
 {
     THERMAL_RESERVED = 0,
     THERMAL_CPU_CORE,
+    THERMAL_MEMORY,
     THERMAL_1_ON_MAIN_BROAD,
     THERMAL_2_ON_MAIN_BROAD,
     THERMAL_3_ON_MAIN_BROAD,
     THERMAL_4_ON_MAIN_BROAD,
     THERMAL_5_ON_MAIN_BROAD,
     THERMAL_6_ON_MAIN_BROAD,
-    THERMAL_ON_PSU1,
-    THERMAL_ON_PSU2
+    THERMAL_7_ON_MAIN_BROAD,
+    THERMAL1_ON_PSU1,
+    THERMAL2_ON_PSU1,
+    THERMAL1_ON_PSU2,
+    THERMAL2_ON_PSU2
 };
 
 enum fan_id {
