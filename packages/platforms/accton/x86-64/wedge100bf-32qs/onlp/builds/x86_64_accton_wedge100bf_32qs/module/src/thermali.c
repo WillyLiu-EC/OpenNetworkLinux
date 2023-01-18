@@ -95,7 +95,7 @@ static onlp_thermal_info_t linfo[] = {
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {90000, 95000, 100000}
     },
-    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "max6658-i2c-3-4c Tofino Fan Ctrl", 0}, 
+    { { ONLP_THERMAL_ID_CREATE(THERMAL_6_ON_MAIN_BROAD), "max6658-i2c-3-4c Tofino", 0}, 
             ONLP_THERMAL_STATUS_PRESENT,
             ONLP_THERMAL_CAPS_ALL, 0, {94500, 99750, 105000}
     },
