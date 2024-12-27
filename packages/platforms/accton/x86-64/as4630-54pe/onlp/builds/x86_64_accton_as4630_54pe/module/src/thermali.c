@@ -28,9 +28,11 @@
 #include <onlp/platformi/thermali.h>
 #include "platform_lib.h"
 
+#define NUM_OF_CPU_CORES 4
 #define THERMAL_PATH_FORMAT 	"/sys/bus/i2c/devices/%s/*temp1_input"
 #define PSU_THERMAL_PATH_FORMAT "/sys/bus/i2c/devices/%s/*psu_temp1_input"
-
+#define CPU_CORE_ID_PATH_FORMAT  "/sys/devices/system/cpu/cpu%d/topology/core_id"
+#define CPU_CORETEMP_PATH_FORMAT "/sys/devices/platform/coretemp.0*temp%d_input"
 
 #define VALIDATE(_id)                           \
     do {                                        \
@@ -60,15 +62,6 @@ static char* directory[] =  /* must map with onlp_thermal_id */
     "10-0058",
     "11-0059",
 };
-
-static char* cpu_coretemp_files[] =
-    {
-        "/sys/devices/platform/coretemp.0*temp1_input",
-        "/sys/devices/platform/coretemp.0*temp4_input",
-        "/sys/devices/platform/coretemp.0*temp8_input",
-        "/sys/devices/platform/coretemp.0*temp10_input",
-        NULL,
-    };
 
 /* Static values */
 static onlp_thermal_info_t linfo[] = {
@@ -109,6 +102,39 @@ onlp_thermali_init(void)
     return ONLP_STATUS_OK;
 }
 
+int get_max_cpu_coretemp(int *max_cpu_coretemp)
+{
+    int core_id = 0;
+    int cpu_coretemp = 0;
+    int i = 0;
+    for(i = 0; i < NUM_OF_CPU_CORES; i++){
+        if(onlp_file_read_int(&core_id, CPU_CORE_ID_PATH_FORMAT, i) < 0) {
+            AIM_LOG_ERROR("Unable to read cpu core id from "CPU_CORE_ID_PATH_FORMAT"\r\n",
+                i);
+            *max_cpu_coretemp = 0;
+            return ONLP_STATUS_E_INTERNAL;
+        }
+        if(onlp_file_read_int(&cpu_coretemp, CPU_CORETEMP_PATH_FORMAT, core_id+2) < 0) {
+            AIM_LOG_ERROR("Unable to read cpu coretemp from "CPU_CORETEMP_PATH_FORMAT"\r\n",
+                core_id+2);
+            *max_cpu_coretemp = 0;
+            return ONLP_STATUS_E_INTERNAL;
+        }
+        if(cpu_coretemp > *max_cpu_coretemp)
+            *max_cpu_coretemp = cpu_coretemp;
+    }
+    // read package temp, which is always in temp1_input
+    if(onlp_file_read_int(&cpu_coretemp, CPU_CORETEMP_PATH_FORMAT, 1) < 0) {
+            AIM_LOG_ERROR("Unable to read cpu package temp from "CPU_CORETEMP_PATH_FORMAT"\r\n",
+                1);
+            *max_cpu_coretemp = 0;
+            return ONLP_STATUS_E_INTERNAL;
+    }
+    *max_cpu_coretemp = (*max_cpu_coretemp > cpu_coretemp) ?
+                            *max_cpu_coretemp : cpu_coretemp;
+    return ONLP_STATUS_OK;
+}
+
 /*
  * Retrieve the information structure for the given thermal OID.
  *
@@ -132,7 +158,7 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
     /* Set the onlp_oid_hdr_t and capabilities */		
     *info = linfo[tid];
     if(tid == THERMAL_CPU_CORE) {
-        return onlp_file_read_int_max(&info->mcelsius, cpu_coretemp_files);
+        return  get_max_cpu_coretemp(&info->mcelsius);
     }
 
 	switch (tid) {
