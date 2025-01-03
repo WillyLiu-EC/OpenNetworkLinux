@@ -23,16 +23,37 @@
  * Thermal Sensor Platform Implementation.
  *
  ***********************************************************/
-//#include <unistd.h>
 #include <onlplib/file.h>
 #include <onlp/platformi/thermali.h>
 #include "platform_lib.h"
+#include <dirent.h>
+#include <regex.h>
 
-#define NUM_OF_CPU_CORES 4
 #define THERMAL_PATH_FORMAT 	"/sys/bus/i2c/devices/%s/*temp1_input"
 #define PSU_THERMAL_PATH_FORMAT "/sys/bus/i2c/devices/%s/*psu_temp1_input"
-#define CPU_CORE_ID_PATH_FORMAT  "/sys/devices/system/cpu/cpu%d/topology/core_id"
-#define CPU_CORETEMP_PATH_FORMAT "/sys/devices/platform/coretemp.0*temp%d_input"
+#define CPU_CORETEMP_DIR_PATH "/sys/devices/platform/coretemp.0/hwmon"
+#define MAX_ENTRIES 128  /* Maximum number of temp*_input files */
+#define MAX_NAME_LEN 256 /* Maximum file name length */
+
+typedef struct {
+    char name[MAX_NAME_LEN];
+    int index;
+} TempEntry;
+
+TempEntry temp_entries[MAX_ENTRIES];
+/* Global regex variables */
+regex_t dir_regex, file_regex;
+int sysfs_count = 0;
+/* Function to safely concatenate paths and handle overflow */
+int safe_snprintf(char *buffer, size_t buffer_size, const char *path1, const char *path2) {
+    size_t needed_size = strlen(path1) + strlen(path2) + 2; /* 1 for '/', 1 for '\0' */
+    if (needed_size > buffer_size) {
+        fprintf(stderr, "Path too long: %s/%s\n", path1, path2);
+        return -1;
+    }
+    snprintf(buffer, buffer_size, "%s/%s", path1, path2);
+    return 0;
+}
 
 #define VALIDATE(_id)                           \
     do {                                        \
@@ -93,45 +114,94 @@ static onlp_thermal_info_t linfo[] = {
         }
 };
 
+int initialize_regex() {
+    if (regcomp(&dir_regex, "^hwmon[0-9]+$", REG_EXTENDED) != 0) {
+        fprintf(stderr, "Failed to compile directory regex\n");
+        return -1;
+    }
+    if (regcomp(&file_regex, "^temp([0-9]+)_input$", REG_EXTENDED) != 0) {
+        fprintf(stderr, "Failed to compile file regex\n");
+        regfree(&dir_regex);
+        return -1;
+    }
+    return 0;
+}
+
+void cleanup_regex() {
+    regfree(&dir_regex);
+    regfree(&file_regex);
+}
+
+/* Function to scan hwmon directories for temp*_input files */
+void scan_hwmon_files(const char *parent_path) {
+    DIR *parent_dir = opendir(parent_path);
+    if (!parent_dir) {
+        perror("Failed to open parent directory");
+        return;
+    }
+
+    size_t count = 0;
+
+    struct dirent *entry;
+    while ((entry = readdir(parent_dir)) != NULL) {
+        if (regexec(&dir_regex, entry->d_name, 0, NULL, 0) != 0) {
+            continue;
+        }
+
+        char subdir_path[MAX_NAME_LEN];
+        if (safe_snprintf(subdir_path, sizeof(subdir_path), parent_path, entry->d_name) < 0) {
+            continue;
+        }
+
+        DIR *subdir = opendir(subdir_path);
+        if (!subdir) {
+            perror("Failed to open subdirectory");
+            continue;
+        }
+
+        struct dirent *sub_entry;
+        while ((sub_entry = readdir(subdir)) != NULL) {
+            regmatch_t pmatch[2];
+            if (regexec(&file_regex, sub_entry->d_name, 2, pmatch, 0) == 0) {
+                if (count >= MAX_ENTRIES) {
+                    fprintf(stderr, "Maximum entries reached. Ignoring additional files.\n");
+                    break;
+                }
+
+                char full_path[MAX_NAME_LEN];
+                if (safe_snprintf(full_path, sizeof(full_path), subdir_path, sub_entry->d_name) < 0) {
+                    continue;
+                }
+
+                int index = atoi(&sub_entry->d_name[pmatch[1].rm_so]);
+                strncpy(temp_entries[count].name, full_path, MAX_NAME_LEN - 1);
+                temp_entries[count].name[MAX_NAME_LEN - 1] = '\0';
+                temp_entries[count].index = index;
+                count++;
+            }
+        }
+        closedir(subdir);
+    }
+
+    closedir(parent_dir);
+
+    sysfs_count = count;
+}
+
 /*
  * This will be called to intiialize the thermali subsystem.
  */
 int
 onlp_thermali_init(void)
 {
-    return ONLP_STATUS_OK;
-}
+    /* Initialize regex patterns */
+    if (initialize_regex() != 0) {
+        return ONLP_STATUS_E_INTERNAL;
+    }
+    scan_hwmon_files(CPU_CORETEMP_DIR_PATH);
+    /* Clean up regex patterns */
+    cleanup_regex();
 
-int get_max_cpu_coretemp(int *max_cpu_coretemp)
-{
-    int core_id = 0;
-    int cpu_coretemp = 0;
-    int i = 0;
-    for(i = 0; i < NUM_OF_CPU_CORES; i++){
-        if(onlp_file_read_int(&core_id, CPU_CORE_ID_PATH_FORMAT, i) < 0) {
-            AIM_LOG_ERROR("Unable to read cpu core id from "CPU_CORE_ID_PATH_FORMAT"\r\n",
-                i);
-            *max_cpu_coretemp = 0;
-            return ONLP_STATUS_E_INTERNAL;
-        }
-        if(onlp_file_read_int(&cpu_coretemp, CPU_CORETEMP_PATH_FORMAT, core_id+2) < 0) {
-            AIM_LOG_ERROR("Unable to read cpu coretemp from "CPU_CORETEMP_PATH_FORMAT"\r\n",
-                core_id+2);
-            *max_cpu_coretemp = 0;
-            return ONLP_STATUS_E_INTERNAL;
-        }
-        if(cpu_coretemp > *max_cpu_coretemp)
-            *max_cpu_coretemp = cpu_coretemp;
-    }
-    // read package temp, which is always in temp1_input
-    if(onlp_file_read_int(&cpu_coretemp, CPU_CORETEMP_PATH_FORMAT, 1) < 0) {
-            AIM_LOG_ERROR("Unable to read cpu package temp from "CPU_CORETEMP_PATH_FORMAT"\r\n",
-                1);
-            *max_cpu_coretemp = 0;
-            return ONLP_STATUS_E_INTERNAL;
-    }
-    *max_cpu_coretemp = (*max_cpu_coretemp > cpu_coretemp) ?
-                            *max_cpu_coretemp : cpu_coretemp;
     return ONLP_STATUS_OK;
 }
 
@@ -154,11 +224,24 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
     VALIDATE(id);
 	
     tid = ONLP_OID_ID_GET(id);
+    int coretemp_max = 0, coretemp_temp = 0;
 	
-    /* Set the onlp_oid_hdr_t and capabilities */		
+    /* Set the onlp_oid_hdr_t and capabilities */
     *info = linfo[tid];
     if(tid == THERMAL_CPU_CORE) {
-        return  get_max_cpu_coretemp(&info->mcelsius);
+
+        for (size_t i = 0; i < sysfs_count; i++) {
+            if (onlp_file_read_int(&coretemp_temp, temp_entries[i].name) < 0) {
+                AIM_LOG_ERROR("Unable to read status from file (%s)\r\n", temp_entries[i].name);
+                return ONLP_STATUS_E_INTERNAL;
+            }
+            if (coretemp_temp > coretemp_max)
+                coretemp_max = coretemp_temp;
+        }
+
+        info->mcelsius = coretemp_max;
+
+        return ONLP_STATUS_OK;
     }
 
 	switch (tid) {
@@ -182,7 +265,6 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
         return ONLP_STATUS_E_INTERNAL;
     }
 
-    return ONLP_STATUS_OK;								
+    return ONLP_STATUS_OK;
 }
-
 
