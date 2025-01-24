@@ -1,4 +1,3 @@
-import commands
 from itertools import chain
 from onl.platform.base import *
 from onl.platform.accton import *
