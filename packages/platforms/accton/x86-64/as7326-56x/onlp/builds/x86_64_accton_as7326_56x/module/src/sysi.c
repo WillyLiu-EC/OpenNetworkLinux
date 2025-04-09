@@ -39,8 +39,9 @@
 
 #define NUM_OF_FAN_ON_MAIN_BROAD      6
 
+#define BIOS_VER_PATH "/sys/devices/virtual/dmi/id/bios_version"
 #define PREFIX_PATH_ON_CPLD_DEV          "/sys/bus/i2c/devices/"
-#define NUM_OF_CPLD                      3
+#define NUM_OF_CPLD                   5
 #define FAN_DUTY_CYCLE_MAX         (100)
 #define FAN_DUTY_CYCLE_DEFAULT     (32)
 #define FAN_DUTY_PLUS_FOR_DIR      (13)
@@ -52,9 +53,11 @@
 
 static char arr_cplddev_name[NUM_OF_CPLD][10] =
 {
- "18-0060",
- "12-0062",
- "19-0064"
+ "0-0065",   /* CPU CPLD */
+ "11-0066",  /* FAN CPLD */
+ "18-0060",  /* CPLD 1*/
+ "12-0062",  /* CPLD 2*/
+ "19-0064"   /* CPLD 3*/
 };
 
 const char*
@@ -122,16 +125,38 @@ onlp_sysi_oids_get(onlp_oid_t* table, int max)
 int
 onlp_sysi_platform_info_get(onlp_platform_info_t* pi)
 {
-    int   i, v[NUM_OF_CPLD]={0};
+    int   i, v[NUM_OF_CPLD] = {0};
+    int   rv;
+    onlp_onie_info_t onie;
+    char *bios_ver = NULL;
+    char *paths[] = {IDPROM_PATH_2, IDPROM_PATH_1};
+
+    onlp_file_read_str(&bios_ver, BIOS_VER_PATH);
+
+    for (i = 0 ; i < AIM_ARRAYSIZE(paths); i++ ){
+        rv = onlp_onie_decode_file(&onie, paths[i]);
+        /* Decode succeeded if rv >= 0 */
+        if(rv >= 0)
+            break;
+    }
 
     for (i = 0; i < NUM_OF_CPLD; i++) {
         v[i] = 0;
-
-        if(onlp_file_read_int(v+i, "%s%s/version", PREFIX_PATH_ON_CPLD_DEV, arr_cplddev_name[i]) < 0) {
-            return ONLP_STATUS_E_INTERNAL;
-        }
+        onlp_file_read_int(v+i, "%s%s/version", PREFIX_PATH_ON_CPLD_DEV, arr_cplddev_name[i]);
     }
-    pi->cpld_versions = aim_fstrdup("%d.%d.%d", v[0], v[1], v[2]);
+
+    pi->cpld_versions = aim_fstrdup("\r\n\t   CPU CPLD(0x65): %02X"
+                                    "\r\n\t   Fan CPLD(0x66): %02X"
+                                    "\r\n\t   Main CPLD(0x60): %02X"
+                                    "\r\n\t   Main CPLD(0x62): %02X"
+                                    "\r\n\t   Main CPLD(0x64): %02X\r\n",
+                                    v[0], v[1], v[2], v[3], v[4]);
+
+    pi->other_versions = aim_fstrdup("\r\n\t   BIOS: %s\r\n\t   ONIE: %s",
+                                    bios_ver, onie.onie_version);
+
+    onlp_onie_info_free(&onie);
+    AIM_FREE_IF_PTR(bios_ver);
 
     return 0;
 }

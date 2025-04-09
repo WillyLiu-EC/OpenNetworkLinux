@@ -48,7 +48,8 @@ struct cpld_client_node {
 enum cpld_type {
     as7326_56x_cpld1,
     as7326_56x_cpld2,
-    as7326_56x_cpld3
+    as7326_56x_cpld3,
+    as7326_56x_cpu_cpld
 };
 
 struct as7326_56x_cpld_data {
@@ -61,6 +62,7 @@ static const struct i2c_device_id as7326_56x_cpld_id[] = {
     { "as7326_56x_cpld1", as7326_56x_cpld1 },
     { "as7326_56x_cpld2", as7326_56x_cpld2 },
     { "as7326_56x_cpld3", as7326_56x_cpld3 },
+    { "as7326_56x_cpu_cpld", as7326_56x_cpu_cpld },
     { }
 };
 MODULE_DEVICE_TABLE(i2c, as7326_56x_cpld_id);
@@ -436,6 +438,16 @@ DECLARE_SFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(47);
 DECLARE_SFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(48);
 DECLARE_SFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(57);
 DECLARE_SFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(58);
+
+static struct attribute *as7326_56x_cpu_cpld_attributes[] = {
+    &sensor_dev_attr_version.dev_attr.attr,
+    &sensor_dev_attr_access.dev_attr.attr,
+    NULL
+};
+
+static const struct attribute_group as7326_56x_cpu_cpld_group = {
+    .attrs = as7326_56x_cpu_cpld_attributes,
+};
 
 static struct attribute *as7326_56x_cpld3_attributes[] = {
     &sensor_dev_attr_version.dev_attr.attr,
@@ -979,6 +991,9 @@ static int as7326_56x_cpld_probe(struct i2c_client *client,
 	case as7326_56x_cpld3:
         group = &as7326_56x_cpld3_group;
         break;
+    case as7326_56x_cpu_cpld:
+        group = &as7326_56x_cpu_cpld_group;
+        break;
     default:
         break;
     }
@@ -1016,6 +1031,8 @@ static int as7326_56x_cpld_remove(struct i2c_client *client)
         break;
 	case as7326_56x_cpld3:
         group = &as7326_56x_cpld3_group;
+    case as7326_56x_cpu_cpld:
+        group = &as7326_56x_cpu_cpld_group;
         break;
     default:
         break;

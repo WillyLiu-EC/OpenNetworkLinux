@@ -62,6 +62,7 @@ class OnlPlatform_x86_64_accton_as7326_56x_r0(OnlPlatformAccton,
             self.insmod("x86-64-accton-as7326-56x-%s.ko" % m)
 
         self.new_i2c_device('pca9548', 0x77, 0)
+        self.new_i2c_device('as7326_56x_cpu_cpld', 0x65, 0)
         ########### initialize I2C bus 1 ###########
         # initialize multiplexer (PCA9548)
         self.new_i2c_device('pca9548', 0x70, 1)

@@ -95,5 +95,14 @@ int psu_acbel_serial_number_get(int id, char *serial, int serial_len);
     #define DEBUG_PRINT(format, ...)
 #endif
 
+#define AIM_FREE_IF_PTR(p) \
+    do \
+    { \
+        if (p) { \
+            aim_free(p); \
+            p = NULL; \
+        } \
+    } while (0)
+
 #endif  /* __PLATFORM_LIB_H__ */
 
