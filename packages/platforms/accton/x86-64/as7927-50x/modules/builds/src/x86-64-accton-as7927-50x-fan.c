@@ -36,19 +36,14 @@
 #define DRVNAME "as7927_50x_fan"
 #define IPMI_FAN_READ_CMD 0x14
 #define IPMI_FAN_WRITE_CMD 0x15
-#define IPMI_FAN_READ_MODEL_CMD 0x10
-#define IPMI_FAN_READ_SERIAL_CMD 0x11
 #define IPMI_FAN_READ_RPM_CMD 0x20
 #define IPMI_FAN_REG_READ_CMD 0x20
-#define MAX_FAN_SPEED_RPM 33000
-#define IPMI_FAN_MODEL_SIZE 13
-#define IPMI_FAN_SERIAL_SIZE 10
+#define MAX_FAN_F_SPEED_RPM 31000
+#define MAX_FAN_R_SPEED_RPM 28000
 
 static ssize_t set_fan(struct device *dev, struct device_attribute *da,
             const char *buf, size_t count);
 static ssize_t show_fan(struct device *dev, struct device_attribute *attr,
-            char *buf);
-static ssize_t show_string(struct device *dev, struct device_attribute *attr,
             char *buf);
 static ssize_t show_version(struct device *dev, struct device_attribute *da,
             char *buf);
@@ -68,6 +63,12 @@ enum fan_id {
     FAN_6,
     FAN_7,
     FAN_8,
+    FAN_9,
+    FAN_10,
+    FAN_11,
+    FAN_12,
+    FAN_13,
+    FAN_14,
     NUM_OF_FAN,
     NUM_OF_FAN_MODULE = NUM_OF_FAN
 };
@@ -118,17 +119,13 @@ static struct platform_driver as7927_50x_fan_driver = {
 #define FAN_FAULT_ATTR_ID(index) FAN##index##_FAULT
 #define FAN_RPM_TARGET_ATTR_ID(index) FAN##index##_TARGET
 #define FAN_RPM_TOLERANCE_ATTR_ID(index) FAN##index##_TOLERANCE
-#define FAN_MODEL_ATTR_ID(index) FAN##index##_MODEL
-#define FAN_SERIAL_ATTR_ID(index) FAN##index##_SERIAL
 
 #define FAN_ATTR(fan_id) \
     FAN_PRESENT_ATTR_ID(fan_id), \
     FAN_PWM_ATTR_ID(fan_id), \
     FAN_RPM_ATTR_ID(fan_id), \
     FAN_DIR_ATTR_ID(fan_id), \
-    FAN_FAULT_ATTR_ID(fan_id), \
-    FAN_MODEL_ATTR_ID(fan_id), \
-    FAN_SERIAL_ATTR_ID(fan_id)
+    FAN_FAULT_ATTR_ID(fan_id)
 
 #define FAN_RPM_THRESHOLD_ATTR(fan_id) \
     FAN_RPM_TARGET_ATTR_ID(fan_id), \
@@ -143,9 +140,16 @@ enum as7927_50x_fan_sysfs_attrs {
     FAN_ATTR(6),
     FAN_ATTR(7),
     FAN_ATTR(8),
+    FAN_ATTR(9),
+    FAN_ATTR(10),
+    FAN_ATTR(11),
+    FAN_ATTR(12),
+    FAN_ATTR(13),
+    FAN_ATTR(14),
     NUM_OF_FAN_ATTR,
     FAN_VERSION,
-    FAN_MAX_RPM,
+    FAN_R_MAX_RPM,
+    FAN_F_MAX_RPM,
     NUM_OF_PER_FAN_ATTR = (NUM_OF_FAN_ATTR/NUM_OF_FAN),
     FAN_RPM_THRESHOLD_ATTR(1),
     FAN_RPM_THRESHOLD_ATTR(2),
@@ -154,7 +158,13 @@ enum as7927_50x_fan_sysfs_attrs {
     FAN_RPM_THRESHOLD_ATTR(5),
     FAN_RPM_THRESHOLD_ATTR(6),
     FAN_RPM_THRESHOLD_ATTR(7),
-    FAN_RPM_THRESHOLD_ATTR(8)
+    FAN_RPM_THRESHOLD_ATTR(8),
+    FAN_RPM_THRESHOLD_ATTR(9),
+    FAN_RPM_THRESHOLD_ATTR(10),
+    FAN_RPM_THRESHOLD_ATTR(11),
+    FAN_RPM_THRESHOLD_ATTR(12),
+    FAN_RPM_THRESHOLD_ATTR(13),
+    FAN_RPM_THRESHOLD_ATTR(14)
 };
 
 /* fan attributes */
@@ -178,15 +188,14 @@ enum as7927_50x_fan_sysfs_attrs {
                                 NULL, FAN##index##_TARGET); \
     static SENSOR_DEVICE_ATTR(fan##index##_tolerance, S_IRUGO, show_threshold,\
                                 NULL, FAN##index##_TOLERANCE); \
-    static SENSOR_DEVICE_ATTR(fan##index##_model, S_IRUGO, show_string,\
-                                NULL, FAN##index##_MODEL); \
-    static SENSOR_DEVICE_ATTR(fan##index##_serial, S_IRUGO, show_string,\
-                                NULL, FAN##index##_SERIAL)
 
-static SENSOR_DEVICE_ATTR(fan_max_speed_rpm, S_IRUGO, show_fan, NULL, \
-            FAN_MAX_RPM);
+static SENSOR_DEVICE_ATTR(fan_max_r_speed_rpm, S_IRUGO, show_fan, NULL, \
+            FAN_R_MAX_RPM);
+static SENSOR_DEVICE_ATTR(fan_max_f_speed_rpm, S_IRUGO, show_fan, NULL, \
+            FAN_F_MAX_RPM);
 #define DECLARE_FAN_MAX_RPM_ATTR(index) \
-            &sensor_dev_attr_fan_max_speed_rpm.dev_attr.attr
+            &sensor_dev_attr_fan_max_r_speed_rpm.dev_attr.attr,\
+            &sensor_dev_attr_fan_max_f_speed_rpm.dev_attr.attr
 
 #define DECLARE_FAN_ATTR(index) \
     &sensor_dev_attr_fan##index##_present.dev_attr.attr, \
@@ -195,9 +204,7 @@ static SENSOR_DEVICE_ATTR(fan_max_speed_rpm, S_IRUGO, show_fan, NULL, \
     &sensor_dev_attr_fan##index##_dir.dev_attr.attr, \
     &sensor_dev_attr_fan##index##_fault.dev_attr.attr, \
     &sensor_dev_attr_fan##index##_target.dev_attr.attr, \
-    &sensor_dev_attr_fan##index##_tolerance.dev_attr.attr, \
-    &sensor_dev_attr_fan##index##_model.dev_attr.attr, \
-    &sensor_dev_attr_fan##index##_serial.dev_attr.attr
+    &sensor_dev_attr_fan##index##_tolerance.dev_attr.attr
 
 DECLARE_FAN_SENSOR_DEVICE_ATTR(1);
 DECLARE_FAN_SENSOR_DEVICE_ATTR(2);
@@ -207,6 +214,12 @@ DECLARE_FAN_SENSOR_DEVICE_ATTR(5);
 DECLARE_FAN_SENSOR_DEVICE_ATTR(6);
 DECLARE_FAN_SENSOR_DEVICE_ATTR(7);
 DECLARE_FAN_SENSOR_DEVICE_ATTR(8);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(9);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(10);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(11);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(12);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(13);
+DECLARE_FAN_SENSOR_DEVICE_ATTR(14);
 DECLARE_FAN_VER_SENSOR_DEVICE_ATTR();
 
 static struct attribute *as7927_50x_fan_attrs[] = {
@@ -219,6 +232,12 @@ static struct attribute *as7927_50x_fan_attrs[] = {
     DECLARE_FAN_ATTR(6),
     DECLARE_FAN_ATTR(7),
     DECLARE_FAN_ATTR(8),
+    DECLARE_FAN_ATTR(9),
+    DECLARE_FAN_ATTR(10),
+    DECLARE_FAN_ATTR(11),
+    DECLARE_FAN_ATTR(12),
+    DECLARE_FAN_ATTR(13),
+    DECLARE_FAN_ATTR(14),
     DECLARE_FAN_VER_ATTR(),
     DECLARE_FAN_MAX_RPM_ATTR(),
     NULL
@@ -266,8 +285,12 @@ static ssize_t show_fan(struct device *dev, struct device_attribute *da,
     int present = 0;
     int error = 0;
 
-    if (attr->index == FAN_MAX_RPM)
-        return sprintf(buf, "%d\n", MAX_FAN_SPEED_RPM);
+    switch (attr->index) {
+    case FAN_R_MAX_RPM:
+        return sprintf(buf, "%d\n", MAX_FAN_R_SPEED_RPM);
+    case FAN_F_MAX_RPM:
+        return sprintf(buf, "%d\n", MAX_FAN_F_SPEED_RPM);
+    }
 
     mutex_lock(&data->update_lock);
 
@@ -289,6 +312,12 @@ static ssize_t show_fan(struct device *dev, struct device_attribute *da,
     case FAN6_PRESENT:
     case FAN7_PRESENT:
     case FAN8_PRESENT:
+    case FAN9_PRESENT:
+    case FAN10_PRESENT:
+    case FAN11_PRESENT:
+    case FAN12_PRESENT:
+    case FAN13_PRESENT:
+    case FAN14_PRESENT:
         value = present;
         break;
     case FAN1_PWM:
@@ -299,6 +328,12 @@ static ssize_t show_fan(struct device *dev, struct device_attribute *da,
     case FAN6_PWM:
     case FAN7_PWM:
     case FAN8_PWM:
+    case FAN9_PWM:
+    case FAN10_PWM:
+    case FAN11_PWM:
+    case FAN12_PWM:
+    case FAN13_PWM:
+    case FAN14_PWM:
         index = (fid % NUM_OF_FAN_MODULE) * FAN_DATA_COUNT;
         value = DIV_ROUND_CLOSEST(data->ipmi_resp[index + FAN_PWM] * 666, 100);
         break;
@@ -310,6 +345,12 @@ static ssize_t show_fan(struct device *dev, struct device_attribute *da,
     case FAN6_INPUT:
     case FAN7_INPUT:
     case FAN8_INPUT:
+    case FAN9_INPUT:
+    case FAN10_INPUT:
+    case FAN11_INPUT:
+    case FAN12_INPUT:
+    case FAN13_INPUT:
+    case FAN14_INPUT:
         value = (int)data->ipmi_resp[index + FAN_SPEED0] |
                 (int)data->ipmi_resp[index + FAN_SPEED1] << 8;
         break;
@@ -321,6 +362,12 @@ static ssize_t show_fan(struct device *dev, struct device_attribute *da,
     case FAN6_FAULT:
     case FAN7_FAULT:
     case FAN8_FAULT:
+    case FAN9_FAULT:
+    case FAN10_FAULT:
+    case FAN11_FAULT:
+    case FAN12_FAULT:
+    case FAN13_FAULT:
+    case FAN14_FAULT:
         value = (int)data->ipmi_resp[index + FAN_SPEED0] |
                 (int)data->ipmi_resp[index + FAN_SPEED1] << 8;
         value = !value;
@@ -356,13 +403,14 @@ static ssize_t set_fan(struct device *dev, struct device_attribute *da,
 
     /*
      * Send IPMI write command :
-     * BMC supports a design with four fan modules, each containing two fans.
-     * Since NUM_OF_FAN_MODULE is 8 in AS9817, it needs to be divided by 2.
+     * BMC supports a design with seven fan modules, each containing two fans.
+     * Since NUM_OF_FAN_MODULE is 14 in AS7927, it needs to be divided by 2.
      * The result :
      * fan1_pwm(Front) : ipmi_tx_data[0] = 1, fan2_pwm(Front) : ipmi_tx_data[0] = 2
      * fan3_pwm(Front) : ipmi_tx_data[0] = 3, fan4_pwm(Front) : ipmi_tx_data[0] = 4
-     * fan5_pwm(Rear) : ipmi_tx_data[0] = 1, fan6_pwm(Rear) : ipmi_tx_data[0] = 2
-     * fan7_pwm(Rear) : ipmi_tx_data[0] = 3, fan8_pwm(Rear) : ipmi_tx_data[0] = 4
+     * ...
+     * fan8_pwm(Rear)  : ipmi_tx_data[0] = 1, fan9_pwm(Rear)  : ipmi_tx_data[0] = 2
+     * fan10_pwm(Rear) : ipmi_tx_data[0] = 3, fan11_pwm(Rear) : ipmi_tx_data[0] = 4
      *
      */
     data->ipmi_tx_data[0] = (fid % (NUM_OF_FAN_MODULE / 2)) + 1;
@@ -411,105 +459,6 @@ static struct as7927_50x_fan_data *as7927_50x_fan_update_cpld_ver(void)
 
 exit:
     return data;
-}
-
-static struct as7927_50x_fan_data *as7927_50x_fan_update_model_serial(int fan_id, int index)
-{
-    int status = 0;
-    int string_size = 0 ;
-
-    data->valid = 0;
-
-    switch (index) {
-    case FAN1_MODEL:
-    case FAN2_MODEL:
-    case FAN3_MODEL:
-    case FAN4_MODEL:
-    case FAN5_MODEL:
-    case FAN6_MODEL:
-    case FAN7_MODEL:
-    case FAN8_MODEL:
-        data->ipmi_tx_data[0] = IPMI_FAN_READ_MODEL_CMD;
-        string_size = IPMI_FAN_MODEL_SIZE;
-        data->ipmi_resp_string[IPMI_FAN_MODEL_SIZE] = '\0';
-        break;
-    case FAN1_SERIAL:
-    case FAN2_SERIAL:
-    case FAN3_SERIAL:
-    case FAN4_SERIAL:
-    case FAN5_SERIAL:
-    case FAN6_SERIAL:
-    case FAN7_SERIAL:
-    case FAN8_SERIAL:
-        data->ipmi_tx_data[0] = IPMI_FAN_READ_SERIAL_CMD;
-        string_size = IPMI_FAN_SERIAL_SIZE;
-        data->ipmi_resp_string[IPMI_FAN_SERIAL_SIZE] = '\0';
-        break;
-    default:
-        goto exit;
-    }
-
-    if (fan_id > 3)
-        data->ipmi_tx_data[1] = fan_id - 4;
-    else
-        data->ipmi_tx_data[1] = fan_id;
-    status = ipmi_send_message(&data->ipmi, IPMI_FAN_READ_CMD,
-                                data->ipmi_tx_data, 2,
-                                data->ipmi_resp_string,
-                                string_size);
-    if (unlikely(status != 0))
-        goto exit;
-
-    if (unlikely(data->ipmi.rx_result != 0)) {
-        status = -EIO;
-        goto exit;
-    }
-
-    data->last_updated = jiffies;
-    data->valid = 1;
-
-
-exit:
-    return data;
-}
-
-static ssize_t show_string(struct device *dev, struct device_attribute *da,
-                            char *buf)
-{
-    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    unsigned char fid = attr->index / NUM_OF_PER_FAN_ATTR;
-    int present = 0;
-    int error = 0;
-    int index = 0;
-    char *str = NULL;
-
-    mutex_lock(&data->update_lock);
-    /* check fan present */
-    data = as7927_50x_fan_update_device();
-    if (!data->valid) {
-        error = -EIO;
-        goto exit;
-    }
-
-    index = fid * FAN_DATA_COUNT; /* base index */
-    present = !!data->ipmi_resp[index + FAN_PRESENT];
-    mutex_unlock(&data->update_lock);
-    if (!present)
-        return sprintf(buf, "\n");
-
-    mutex_lock(&data->update_lock);
-    data = as7927_50x_fan_update_model_serial(fid, attr->index);
-    if (!data->valid) {
-        error = -EIO;
-        goto exit;
-    }
-    mutex_unlock(&data->update_lock);
-
-    str = data->ipmi_resp_string;
-    return sprintf(buf, "%s\n", str);
-    exit:
-        mutex_unlock(&data->update_lock);
-        return error;
 }
 
 static ssize_t show_version(struct device *dev, struct device_attribute *da,
@@ -597,6 +546,12 @@ static ssize_t show_threshold(struct device *dev, struct device_attribute *da,
     case FAN6_TARGET:
     case FAN7_TARGET:
     case FAN8_TARGET:
+    case FAN9_TARGET:
+    case FAN10_TARGET:
+    case FAN11_TARGET:
+    case FAN12_TARGET:
+    case FAN13_TARGET:
+    case FAN14_TARGET:
         value = (int)data->ipmi_resp_speed[FAN_TARGET_SPEED0] |
                 (int)data->ipmi_resp_speed[FAN_TARGET_SPEED1] << 8;
         break;
@@ -608,6 +563,12 @@ static ssize_t show_threshold(struct device *dev, struct device_attribute *da,
     case FAN6_TOLERANCE:
     case FAN7_TOLERANCE:
     case FAN8_TOLERANCE:
+    case FAN9_TOLERANCE:
+    case FAN10_TOLERANCE:
+    case FAN11_TOLERANCE:
+    case FAN12_TOLERANCE:
+    case FAN13_TOLERANCE:
+    case FAN14_TOLERANCE:
         value = (int)data->ipmi_resp_speed[FAN_SPEED_TOLERANCE];
         break;
     default:
