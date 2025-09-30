@@ -35,7 +35,9 @@
 #define IPMI_PSU_READ_CMD 0x16
 #define IPMI_PSU_MODEL_NAME_CMD 0x10
 #define IPMI_PSU_SERIAL_NUM_CMD 0x11
+#define IPMI_PSU_MFR_ID_CMD 0x12
 #define IPMI_PSU_FAN_DIR_CMD 0x13
+#define IPMI_PSU_HW_VERSION_CMD 0x14
 #define IPMI_PSU_INFO_CMD 0x20
 #define IPMI_MODEL_SERIAL_LEN 32
 #define IPMI_FAN_DIR_LEN 3
@@ -58,7 +60,7 @@ enum psu_id {
 enum psu_data_index {
     PSU_PRESENT = 0,
     PSU_TEMP_FAULT,
-    PSU_POWER_GOOD_CPLD,
+    PSU_POWER_GOOD_FPGA,
     PSU_POWER_GOOD_PMBUS,
     PSU_OVER_VOLTAGE,
     PSU_OVER_CURRENT,
@@ -147,6 +149,8 @@ struct ipmi_psu_resp_data {
     unsigned char info[PSU_INFO_COUNT];
     char serial[IPMI_MODEL_SERIAL_LEN+1];
     char model[IPMI_MODEL_SERIAL_LEN+1];
+    char hwversion[IPMI_MODEL_SERIAL_LEN+1];
+    char mfrid[IPMI_MODEL_SERIAL_LEN+1];
     char fandir[IPMI_FAN_DIR_LEN+1];
 };
 
@@ -182,6 +186,8 @@ static struct platform_driver as7927_50x_psu_driver = {
 #define PSU_POUT_ATTR_ID(index) PSU##index##_POUT
 #define PSU_MODEL_ATTR_ID(index) PSU##index##_MODEL
 #define PSU_SERIAL_ATTR_ID(index) PSU##index##_SERIAL
+#define PSU_HW_VERSION_ATTR_ID(index) PSU##index##_HW_VERSION
+#define PSU_MFR_ID_ATTR_ID(index) PSU##index##_MFR_ID
 #define PSU_TEMP1_INPUT_ATTR_ID(index) PSU##index##_TEMP1_INPUT
 #define PSU_TEMP2_INPUT_ATTR_ID(index) PSU##index##_TEMP2_INPUT
 #define PSU_TEMP3_INPUT_ATTR_ID(index) PSU##index##_TEMP3_INPUT
@@ -216,6 +222,8 @@ static struct platform_driver as7927_50x_psu_driver = {
     PSU_POUT_ATTR_ID(psu_id), \
     PSU_MODEL_ATTR_ID(psu_id), \
     PSU_SERIAL_ATTR_ID(psu_id), \
+    PSU_HW_VERSION_ATTR_ID(psu_id), \
+    PSU_MFR_ID_ATTR_ID(psu_id), \
     PSU_TEMP1_INPUT_ATTR_ID(psu_id), \
     PSU_TEMP2_INPUT_ATTR_ID(psu_id), \
     PSU_TEMP3_INPUT_ATTR_ID(psu_id), \
@@ -268,6 +276,10 @@ enum as7927_50x_psu_sysfs_attrs {
                                 PSU##index##_MODEL); \
     static SENSOR_DEVICE_ATTR(psu##index##_serial, S_IRUGO, show_string, NULL,\
                                 PSU##index##_SERIAL);\
+    static SENSOR_DEVICE_ATTR(psu##index##_hw_version, S_IRUGO, show_string, NULL,\
+                                PSU##index##_HW_VERSION);\
+    static SENSOR_DEVICE_ATTR(psu##index##_mfr_id, S_IRUGO, show_string, NULL,\
+                                PSU##index##_MFR_ID);\
     static SENSOR_DEVICE_ATTR(psu##index##_temp1_input, S_IRUGO, show_psu,NULL,\
                                 PSU##index##_TEMP1_INPUT); \
     static SENSOR_DEVICE_ATTR(psu##index##_temp2_input, S_IRUGO, show_psu,NULL,\
@@ -322,6 +334,8 @@ enum as7927_50x_psu_sysfs_attrs {
     &sensor_dev_attr_psu##index##_pout.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_model.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_serial.dev_attr.attr,\
+    &sensor_dev_attr_psu##index##_hw_version.dev_attr.attr,\
+    &sensor_dev_attr_psu##index##_mfr_id.dev_attr.attr,\
     &sensor_dev_attr_psu##index##_temp1_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp2_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp3_input.dev_attr.attr, \
@@ -441,6 +455,34 @@ static struct as7927_50x_psu_data *as7927_50x_psu_update_device(struct device_at
                                 data->ipmi_tx_data, 2,
                                 data->ipmi_resp[pid].serial,
                                 sizeof(data->ipmi_resp[pid].serial) - 1);
+    if (unlikely(status != 0))
+        goto exit;
+
+    if (unlikely(data->ipmi.rx_result != 0)) {
+        status = -EIO;
+        goto exit;
+    }
+
+    /* Get HW version number from ipmi */
+    data->ipmi_tx_data[1] = IPMI_PSU_HW_VERSION_CMD;
+    status = ipmi_send_message(&data->ipmi, IPMI_PSU_READ_CMD,
+                                data->ipmi_tx_data, 2,
+                                data->ipmi_resp[pid].hwversion,
+                                sizeof(data->ipmi_resp[pid].hwversion) - 1);
+    if (unlikely(status != 0))
+        goto exit;
+
+    if (unlikely(data->ipmi.rx_result != 0)) {
+        status = -EIO;
+        goto exit;
+    }
+
+    /* Get manufacturer ID number from ipmi */
+    data->ipmi_tx_data[1] = IPMI_PSU_MFR_ID_CMD;
+    status = ipmi_send_message(&data->ipmi, IPMI_PSU_READ_CMD,
+                                data->ipmi_tx_data, 2,
+                                data->ipmi_resp[pid].mfrid,
+                                sizeof(data->ipmi_resp[pid].mfrid) - 1);
     if (unlikely(status != 0))
         goto exit;
 
@@ -786,6 +828,16 @@ static ssize_t show_string(struct device *dev, struct device_attribute *da,
     case PSU2_SERIAL:
         VALIDATE_PRESENT_RETURN(pid);
         str = data->ipmi_resp[pid].serial;
+        break;
+    case PSU1_HW_VERSION:
+    case PSU2_HW_VERSION:
+        VALIDATE_PRESENT_RETURN(pid);
+        str = data->ipmi_resp[pid].hwversion;
+        break;
+    case PSU1_MFR_ID:
+    case PSU2_MFR_ID:
+        VALIDATE_PRESENT_RETURN(pid);
+        str = data->ipmi_resp[pid].mfrid;
         break;
     case PSU1_FAN_DIR:
     case PSU2_FAN_DIR:
