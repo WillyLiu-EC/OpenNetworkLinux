@@ -42,7 +42,9 @@
 #define IPMI_CPLD_READ_CMD             0x20
 #define IPMI_CPLD_COM_E_CMD            0x21
 #define IPMI_CPLD_FAN_CMD              0x33
+#define IPMI_CPLD_DCSCM_CMD            0x06 // Since addr conflicts with FPGA, replaced by 0x06
 #define IPMI_CPLD_FPGA_CMD             0x60
+#define IPMI_CPLD_SYS_CMD              0x61
 #define IPMI_CPLD_PORT_CPLD1_CMD       0x62
 #define IPMI_CPLD_PORT_CPLD2_CMD       0x63
 
@@ -78,7 +80,9 @@ enum as5916_54xks_sys_sysfs_attrs {
     FPGA_CPLD,
     PORT_CPLD1,
     PORT_CPLD2,
-    FAN_CPLD
+    FAN_CPLD,
+    DCSCM_CPLD,
+    SYS_CPLD
 };
 /* Functions to talk to the IPMI layer */
 static SENSOR_DEVICE_ATTR(come_e_cpld_ver, S_IRUGO, show_cpld_version, NULL, COM_E_CPLD);
@@ -86,6 +90,8 @@ static SENSOR_DEVICE_ATTR(fpga_cpld_ver, S_IRUGO, show_cpld_version, NULL, FPGA_
 static SENSOR_DEVICE_ATTR(port_cpld1_ver, S_IRUGO, show_cpld_version, NULL, PORT_CPLD1);
 static SENSOR_DEVICE_ATTR(port_cpld2_ver, S_IRUGO, show_cpld_version, NULL, PORT_CPLD2);
 static SENSOR_DEVICE_ATTR(fan_cpld_ver, S_IRUGO, show_cpld_version, NULL, FAN_CPLD);
+static SENSOR_DEVICE_ATTR(dcscm_cpld_ver, S_IRUGO, show_cpld_version, NULL, DCSCM_CPLD);
+static SENSOR_DEVICE_ATTR(sys_cpld_ver, S_IRUGO, show_cpld_version, NULL, SYS_CPLD);
 
 static struct attribute *as7927_50x_sys_attributes[] = {
     &sensor_dev_attr_come_e_cpld_ver.dev_attr.attr,
@@ -93,6 +99,8 @@ static struct attribute *as7927_50x_sys_attributes[] = {
     &sensor_dev_attr_port_cpld1_ver.dev_attr.attr,
     &sensor_dev_attr_port_cpld2_ver.dev_attr.attr,
     &sensor_dev_attr_fan_cpld_ver.dev_attr.attr,
+    &sensor_dev_attr_dcscm_cpld_ver.dev_attr.attr,
+    &sensor_dev_attr_sys_cpld_ver.dev_attr.attr,
     NULL
 };
 
@@ -237,6 +245,12 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
         case FAN_CPLD:
             cpld_addr = IPMI_CPLD_FAN_CMD;
             break;
+        case DCSCM_CPLD:
+            cpld_addr = IPMI_CPLD_DCSCM_CMD;
+            break;
+        case SYS_CPLD:
+            cpld_addr = IPMI_CPLD_SYS_CMD;
+            break;
         default:
             return -EINVAL;
     }
@@ -249,10 +263,13 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
         goto exit;
     }
 
+    
     major = data->ipmi_resp_cpld[0];
-    minor = data->ipmi_resp_cpld[1];
     mutex_unlock(&data->update_lock);
-    return sprintf(buf, "%d.%d\n", major, minor);
+    if (attr->index == DCSCM_CPLD)
+        return snprintf(buf, 32, "%d\n", major);
+    minor = data->ipmi_resp_cpld[1];
+    return snprintf(buf, 32, "%d.%d\n", major, minor);
 
 exit:
     mutex_unlock(&data->update_lock);
