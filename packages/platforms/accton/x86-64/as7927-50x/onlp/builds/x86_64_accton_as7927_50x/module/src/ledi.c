@@ -68,30 +68,29 @@ typedef struct led_light_mode_map {
 led_light_mode_map_t led_map[] = {
     { LED_LOC,   LED_MODE_OFF,           ONLP_LED_MODE_OFF },
     { LED_LOC,   LED_MODE_BLUE_BLINKING, ONLP_LED_MODE_BLUE_BLINKING },
-    { LED_DIAG,  LED_MODE_OFF,           ONLP_LED_MODE_OFF },
     { LED_DIAG,  LED_MODE_GREEN,         ONLP_LED_MODE_GREEN },
     { LED_DIAG,  LED_MODE_RED,           ONLP_LED_MODE_RED },
+    { LED_ALARM, LED_MODE_OFF,           ONLP_LED_MODE_OFF },
+    { LED_ALARM, LED_MODE_RED,           ONLP_LED_MODE_RED },
+    { LED_FAN,   LED_MODE_OFF,           ONLP_LED_MODE_OFF },
+    { LED_FAN,   LED_MODE_GREEN,         ONLP_LED_MODE_GREEN },
+    { LED_FAN,   LED_MODE_RED,           ONLP_LED_MODE_RED },
     { LED_PSU1,  LED_MODE_OFF,           ONLP_LED_MODE_OFF },
     { LED_PSU1,  LED_MODE_GREEN,         ONLP_LED_MODE_GREEN },
     { LED_PSU1,  LED_MODE_RED,           ONLP_LED_MODE_RED },
     { LED_PSU2,  LED_MODE_OFF,           ONLP_LED_MODE_OFF },
     { LED_PSU2,  LED_MODE_GREEN,         ONLP_LED_MODE_GREEN },
     { LED_PSU2,  LED_MODE_RED,           ONLP_LED_MODE_RED },
-    { LED_FAN,   LED_MODE_OFF,           ONLP_LED_MODE_OFF },
-    { LED_FAN,   LED_MODE_GREEN,         ONLP_LED_MODE_GREEN },
-    { LED_FAN,   LED_MODE_RED,           ONLP_LED_MODE_RED },
-    { LED_ALARM, LED_MODE_OFF,           ONLP_LED_MODE_OFF },
-    { LED_ALARM, LED_MODE_RED,           ONLP_LED_MODE_RED }
 };
 
 static char *leds[] = { /* must map with onlp_led_id */
     NULL,
     "loc",
     "diag",
+    "alarm",
+    "fan",
     "psu1",
     "psu2",
-    "fan",
-    "alarm",
 };
 
 /*
@@ -111,17 +110,22 @@ static onlp_led_info_t linfo[] =
         ONLP_LED_CAPS_AUTO,
     },
     {
-        { ONLP_LED_ID_CREATE(LED_PSU1), "Chassis LED 3 (PSU1 LED)", 0, {0} },
+        { ONLP_LED_ID_CREATE(LED_ALARM), "Chassis LED 3 (ALARM LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
         ONLP_LED_CAPS_AUTO,
     },
     {
-        { ONLP_LED_ID_CREATE(LED_PSU2), "Chassis LED 4 (PSU2 LED)", 0, {0} },
+        { ONLP_LED_ID_CREATE(LED_FAN), "Chassis LED 4 (FAN LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
         ONLP_LED_CAPS_AUTO,
     },
     {
-        { ONLP_LED_ID_CREATE(LED_FAN), "Chassis LED 5 (FAN LED)", 0, {0} },
+        { ONLP_LED_ID_CREATE(LED_PSU1), "Chassis LED 5 (PSU1 LED)", 0, {0} },
+        ONLP_LED_STATUS_PRESENT,
+        ONLP_LED_CAPS_AUTO,
+    },
+    {
+        { ONLP_LED_ID_CREATE(LED_PSU2), "Chassis LED 6 (PSU2 LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
         ONLP_LED_CAPS_AUTO,
     },

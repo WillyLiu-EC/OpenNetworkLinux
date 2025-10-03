@@ -72,18 +72,18 @@ static struct platform_driver as7927_50x_thermal_driver = {
 };
 
 enum as7927_50x_thermal_sysfs_attrs {
-    TEMP1_INPUT,  // 0x48
-    TEMP2_INPUT,  // 0x49
-    TEMP3_INPUT,  // 0x4a
-    TEMP4_INPUT,  // 0x49
-    TEMP5_INPUT,  // 0x4c
-    TEMP6_INPUT,  // 0x49
-    TEMP7_INPUT,  // 0x49
-    TEMP8_INPUT,  // 0x49
-    TEMP9_INPUT,  // 0x49
-    TEMP10_INPUT, // 0x49 
-    TEMP11_INPUT, // 0x4d 
-    TEMP12_INPUT, // 0x4e
+    TEMP1_INPUT,  // CB_RearLefttemp(U21 0x48) 
+    TEMP2_INPUT,  // CB_FrontLeft_temp(U29 0x49)
+    TEMP3_INPUT,  // MB_FrontLeft_temp(U51 0x4A)
+    TEMP4_INPUT,  // I/OB_temp(AU12 0x49)
+    TEMP5_INPUT,  // MB_FrontRight_temp(U53 0x4C)
+    TEMP6_INPUT,  // MB_RearLeft_temp(U22 0x49)
+    TEMP7_INPUT,  // MAC_DiodeCore_temp(U22 0x49)
+    TEMP8_INPUT,  // MAC_DiodeNif100_temp(U22 0x49)
+    TEMP9_INPUT,  // MAC_DiodeNif50_temp(U22 0x49)
+    TEMP10_INPUT, // MAC_DiodeSch_temp(U22 0x49)
+    TEMP11_INPUT, // FB_FrontRight_temp(U1 0x4D)
+    TEMP12_INPUT, // FB_FrontLeft_temp(U2 0x4E)
 };
 
 #define DECLARE_THERMAL_SENSOR_DEVICE_ATTR(index) \

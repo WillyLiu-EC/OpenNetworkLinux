@@ -36,6 +36,12 @@ enum fan_id {
     FAN_6_ON_FAN_BOARD,
     FAN_7_ON_FAN_BOARD,
     FAN_8_ON_FAN_BOARD,
+    FAN_9_ON_FAN_BOARD,
+    FAN_10_ON_FAN_BOARD,
+    FAN_11_ON_FAN_BOARD,
+    FAN_12_ON_FAN_BOARD,
+    FAN_13_ON_FAN_BOARD,
+    FAN_14_ON_FAN_BOARD,
     FAN_1_ON_PSU_1,
     FAN_1_ON_PSU_2
 };
@@ -73,6 +79,12 @@ onlp_fan_info_t finfo[] = {
     CHASSIS_FAN_INFO(6),
     CHASSIS_FAN_INFO(7),
     CHASSIS_FAN_INFO(8),
+    CHASSIS_FAN_INFO(9),
+    CHASSIS_FAN_INFO(10),
+    CHASSIS_FAN_INFO(11),
+    CHASSIS_FAN_INFO(12),
+    CHASSIS_FAN_INFO(13),
+    CHASSIS_FAN_INFO(14),
     PSU_FAN_INFO(1,1),
     PSU_FAN_INFO(2,1)
 };
@@ -105,13 +117,6 @@ static int
 _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
 {
     int value, ret, pwm;
-    char *str = NULL;
-    int len;
-    int copy_len;
-    int hwmon_idx;
-    char file[32];
-
-    hwmon_idx = onlp_get_fan_hwmon_idx();
 
     /* get fan present status
      */
@@ -162,42 +167,6 @@ _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
     info->percentage = (info->rpm*pwm)/value;
     if (info->percentage > 100)
         info->percentage = 100;
-
-    /* Read model name  */
-    snprintf(file, sizeof(file), "fan%d_model", fid);
-    len = onlp_file_read_str(&str, FAN_SYSFS_FORMAT_1, hwmon_idx, file);
-    if (str && len) {
-        if (sizeof(info->model) > len)
-        {
-            copy_len = len;
-        }
-        else
-        {
-            copy_len = sizeof(info->model) - 1;
-        }
-
-        memcpy(info->model, str, copy_len);
-        info->model[copy_len] = '\0';
-    }
-    AIM_FREE_IF_PTR(str);
-
-    /*  serial number*/
-    snprintf(file, sizeof(file), "fan%d_serial", fid);
-    len = onlp_file_read_str(&str, FAN_SYSFS_FORMAT_1, hwmon_idx, file);
-    if (str && len) {
-        if (sizeof(info->serial) > len)
-        {
-            copy_len = len;
-        }
-        else
-        {
-            copy_len = sizeof(info->serial) - 1;
-        }
-
-        memcpy(info->serial, str, copy_len);
-        info->serial[copy_len] = '\0';
-    }
-    AIM_FREE_IF_PTR(str);
 
     _onlp_fani_set_fan_dir_info(fid, info);
 
@@ -275,11 +244,17 @@ onlp_fani_info_get(onlp_oid_t id, onlp_fan_info_t* info)
         case FAN_6_ON_FAN_BOARD:
         case FAN_7_ON_FAN_BOARD:
         case FAN_8_ON_FAN_BOARD:
+        case FAN_9_ON_FAN_BOARD:
+        case FAN_10_ON_FAN_BOARD:
+        case FAN_11_ON_FAN_BOARD:
+        case FAN_12_ON_FAN_BOARD:
+        case FAN_13_ON_FAN_BOARD:
+        case FAN_14_ON_FAN_BOARD:
             rc = _onlp_fani_info_get_fan(fid, info);
             break;
         case FAN_1_ON_PSU_1:
         case FAN_1_ON_PSU_2:
-            rc = _onlp_fani_info_get_fan_on_psu(fid-FAN_8_ON_FAN_BOARD, info);
+            rc = _onlp_fani_info_get_fan_on_psu(fid-FAN_14_ON_FAN_BOARD, info);
             break;
         default:
             rc = ONLP_STATUS_E_INVALID;
@@ -306,7 +281,7 @@ onlp_fani_percentage_set(onlp_oid_t id, int p)
 
     fid = ONLP_OID_ID_GET(id);
 
-    if (fid < FAN_1_ON_FAN_BOARD || fid > FAN_8_ON_FAN_BOARD) {
+    if (fid < FAN_1_ON_FAN_BOARD || fid > FAN_14_ON_FAN_BOARD) {
         return ONLP_STATUS_E_UNSUPPORTED;
     }
 
