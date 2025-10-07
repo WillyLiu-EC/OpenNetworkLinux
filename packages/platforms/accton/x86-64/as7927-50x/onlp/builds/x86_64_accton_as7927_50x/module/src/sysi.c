@@ -38,10 +38,12 @@
 #include "x86_64_accton_as7927_50x_log.h"
 
 
-#define NUM_OF_CPLD_VER                   5
+#define NUM_OF_CPLD_VER                   7
 
 static char* cpld_ver_path[NUM_OF_CPLD_VER] = {
     "/sys/bus/platform/devices/as7927_50x_sys/come_e_cpld_ver",
+    "/sys/bus/platform/devices/as7927_50x_sys/sys_cpld_ver",
+    "/sys/bus/platform/devices/as7927_50x_sys/dcscm_cpld_ver",
     "/sys/bus/platform/devices/as7927_50x_sys/fpga_cpld_ver",
     "/sys/bus/platform/devices/as7927_50x_sys/fan_cpld_ver",
     "/sys/bus/platform/devices/as7927_50x_sys/port_cpld1_ver",
@@ -119,11 +121,13 @@ onlp_sysi_platform_info_get(onlp_platform_info_t* pi)
 
     if (ret == ONLP_STATUS_OK) {
         pi->cpld_versions = aim_fstrdup("\r\nCOM_E:%s"
+                                        "\r\nSystem CPLD:%s"
+                                        "\r\nDC-SCM CPLD:%s"
                                         "\r\nFPGA CPLD:%s"
                                         "\r\nFan CPLD:%s"
                                         "\r\nPort CPLD1:%s"
                                         "\r\nPort CPLD2:%s"
-                                        , v[0], v[1], v[2], v[3], v[4]);
+                                        , v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
     }
 
     for (i = 0; i < AIM_ARRAYSIZE(v); i++) {

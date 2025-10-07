@@ -47,7 +47,7 @@ struct as7927_50x_led_data {
     struct mutex update_lock;
     char valid;           /* != 0 if registers are valid */
     unsigned long last_updated;    /* In jiffies */
-    unsigned char ipmi_resp[6]; /* 0:Loc 1:Diag 2:Alarm 3:Fan 4:Psu1 5:Psu2 */
+    unsigned char ipmi_resp[6]; /* 0:Loc 1:Alarm 2:Diag 3:Fan 4:Psu1 5:Psu2 */
     struct ipmi_data ipmi;
 };
 
@@ -101,8 +101,8 @@ enum led_light_mode {
 
 enum as7927_50x_led_sysfs_attrs {
     LED_LOC,
-    LED_ALARM,
     LED_DIAG,
+    LED_ALARM,
     LED_FAN,
     LED_PSU1,
     LED_PSU2
@@ -110,10 +110,10 @@ enum as7927_50x_led_sysfs_attrs {
 
 static SENSOR_DEVICE_ATTR(led_loc, S_IWUSR | S_IRUGO, show_led, set_led,
                             LED_LOC);
-static SENSOR_DEVICE_ATTR(led_alarm, S_IWUSR | S_IRUGO, show_led, set_led,
-                            LED_ALARM);
 static SENSOR_DEVICE_ATTR(led_diag, S_IWUSR | S_IRUGO, show_led, NULL,
                             LED_DIAG);
+static SENSOR_DEVICE_ATTR(led_alarm, S_IWUSR | S_IRUGO, show_led, set_led,
+                            LED_ALARM);
 static SENSOR_DEVICE_ATTR(led_fan, S_IWUSR | S_IRUGO, show_led, NULL,
                             LED_FAN);
 static SENSOR_DEVICE_ATTR(led_psu1, S_IWUSR | S_IRUGO, show_led, NULL,
@@ -123,8 +123,8 @@ static SENSOR_DEVICE_ATTR(led_psu2, S_IWUSR | S_IRUGO, show_led, NULL,
 
 static struct attribute *as7927_50x_led_attributes[] = {
     &sensor_dev_attr_led_loc.dev_attr.attr,
-    &sensor_dev_attr_led_alarm.dev_attr.attr,
     &sensor_dev_attr_led_diag.dev_attr.attr,
+    &sensor_dev_attr_led_alarm.dev_attr.attr,
     &sensor_dev_attr_led_fan.dev_attr.attr,
     &sensor_dev_attr_led_psu1.dev_attr.attr,
     &sensor_dev_attr_led_psu2.dev_attr.attr,
