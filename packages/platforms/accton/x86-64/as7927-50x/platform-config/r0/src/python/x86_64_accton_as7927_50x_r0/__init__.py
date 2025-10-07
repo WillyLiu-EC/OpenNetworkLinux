@@ -84,13 +84,15 @@ class OnlPlatform_x86_64_accton_as7927_50x_r0(OnlPlatformAccton,
         self.modprobe('at24')
         self.modprobe('accton_ipmi_intf')
 
-        for m in [ 'i2c-ocores', 'fpga', 'fan', 'psu', 'thermal', 'sys', 'leds','sfp']:
+        for m in [ 'i2c-ocores', 'fpga', 'fan', 'psu', 'thermal', 'sys', 'leds']:
             self.insmod("x86-64-accton-as7927-50x-%s" % m)
 
         # initialize SFP devices
+        for port in range(1, 48):
+            subprocess.call('echo 1 > /sys/devices/platform/as7927_50x_fpga/module_efuse_%d' % (port), shell=True)
         for port in range(49, 51):
-            subprocess.call('echo 0 > /sys/devices/platform/as7927_50x_sfp/module_reset_%d' % (port), shell=True)
-
+            subprocess.call('echo 1 > /sys/devices/platform/as7927_50x_fpga/module_enable_%d' % (port), shell=True)
+            subprocess.call('echo 0 > /sys/devices/platform/as7927_50x_fpga/module_reset_%d' % (port), shell=True)
         #SFP 
         for port in range(1, 49):
             self.new_i2c_device('optoe2', 0x50, port)

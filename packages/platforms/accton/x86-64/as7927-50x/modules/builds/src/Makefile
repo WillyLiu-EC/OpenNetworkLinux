@@ -6,5 +6,4 @@ obj-m += x86-64-accton-as7927-50x-thermal.o
 obj-m += x86-64-accton-as7927-50x-psu.o
 obj-m += x86-64-accton-as7927-50x-sys.o
 obj-m += x86-64-accton-as7927-50x-leds.o
-obj-m += x86-64-accton-as7927-50x-sfp.o
 

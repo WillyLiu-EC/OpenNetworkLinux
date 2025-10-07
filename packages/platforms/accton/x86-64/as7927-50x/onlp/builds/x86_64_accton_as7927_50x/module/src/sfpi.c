@@ -104,7 +104,7 @@ onlp_sfpi_is_present(int port)
 
 int onlp_sfpi_rx_los_bitmap_get(onlp_sfp_bitmap_t* dst)
 {
-    int i = 1, value = 0;
+    int i = 1, value = 0, present = 0;
 
     for (i = 1; i <= NUM_OF_PORT; i++)
     {
@@ -115,7 +115,12 @@ int onlp_sfpi_rx_los_bitmap_get(onlp_sfp_bitmap_t* dst)
                 return ONLP_STATUS_E_INTERNAL;
             }
 
-            if (value)
+            if (onlp_file_read_int(&present, MODULE_PRESENT_FORMAT, i) < 0) {
+                AIM_LOG_ERROR("Unable to read present status from port(%d)\r\n", i);
+                return ONLP_STATUS_E_INTERNAL;
+            }
+
+            if ((value) && (present))
                 AIM_BITMAP_MOD(dst, i, 1);
             else
                 AIM_BITMAP_MOD(dst, i, 0);

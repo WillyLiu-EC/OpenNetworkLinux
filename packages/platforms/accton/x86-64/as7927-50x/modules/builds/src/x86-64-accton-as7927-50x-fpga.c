@@ -126,13 +126,14 @@
 #define XCVR_P40_P33_TXDIS_REG         (CPLD2_PCIE_START_OFFSET + 0x41)
 #define XCVR_P47_P41_TXDIS_REG         (CPLD2_PCIE_START_OFFSET + 0x42)
 
-#define TRANSCEIVER_PRESENT_ATTR_ID(index)    MODULE_PRESENT_##index
-#define TRANSCEIVER_LPMODE_ATTR_ID(index)     MODULE_LPMODE_##index
-#define TRANSCEIVER_RESET_ATTR_ID(index)      MODULE_RESET_##index
-#define TRANSCEIVER_TX_DISABLE_ATTR_ID(index) MODULE_TX_DISABLE_##index
-#define TRANSCEIVER_TX_FAULT_ATTR_ID(index)   MODULE_TX_FAULT_##index
-#define TRANSCEIVER_RX_LOS_ATTR_ID(index)     MODULE_RX_LOS_##index
-
+#define TRANSCEIVER_PRESENT_ATTR_ID(index)           MODULE_PRESENT_##index
+#define TRANSCEIVER_LPMODE_ATTR_ID(index)            MODULE_LPMODE_##index
+#define TRANSCEIVER_RESET_ATTR_ID(index)             MODULE_RESET_##index
+#define TRANSCEIVER_TX_DISABLE_ATTR_ID(index)        MODULE_TX_DISABLE_##index
+#define TRANSCEIVER_TX_FAULT_ATTR_ID(index)          MODULE_TX_FAULT_##index
+#define TRANSCEIVER_RX_LOS_ATTR_ID(index)            MODULE_RX_LOS_##index
+#define TRANSCEIVER_EFUSE_ATTR_ID(index)             MODULE_EFUSE_##index
+#define TRANSCEIVER_ENABLE_ATTR_ID(index)            MODULE_ENABLE_##index
 
 /***********************************************
  *       macro define
@@ -380,12 +381,62 @@ extern int wait_spi(u32 mask, unsigned long timeout);
     TRANSCEIVER_RX_LOS_ATTR_ID(46),
     TRANSCEIVER_RX_LOS_ATTR_ID(47),
     TRANSCEIVER_RX_LOS_ATTR_ID(48),
+    /* EFUSE */
+    TRANSCEIVER_EFUSE_ATTR_ID(1),
+    TRANSCEIVER_EFUSE_ATTR_ID(2),
+    TRANSCEIVER_EFUSE_ATTR_ID(3),
+    TRANSCEIVER_EFUSE_ATTR_ID(4),
+    TRANSCEIVER_EFUSE_ATTR_ID(5),
+    TRANSCEIVER_EFUSE_ATTR_ID(6),
+    TRANSCEIVER_EFUSE_ATTR_ID(7),
+    TRANSCEIVER_EFUSE_ATTR_ID(8),
+    TRANSCEIVER_EFUSE_ATTR_ID(9),
+    TRANSCEIVER_EFUSE_ATTR_ID(10),
+    TRANSCEIVER_EFUSE_ATTR_ID(11),
+    TRANSCEIVER_EFUSE_ATTR_ID(12),
+    TRANSCEIVER_EFUSE_ATTR_ID(13),
+    TRANSCEIVER_EFUSE_ATTR_ID(14),
+    TRANSCEIVER_EFUSE_ATTR_ID(15),
+    TRANSCEIVER_EFUSE_ATTR_ID(16),
+    TRANSCEIVER_EFUSE_ATTR_ID(17),
+    TRANSCEIVER_EFUSE_ATTR_ID(18),
+    TRANSCEIVER_EFUSE_ATTR_ID(19),
+    TRANSCEIVER_EFUSE_ATTR_ID(20),
+    TRANSCEIVER_EFUSE_ATTR_ID(21),
+    TRANSCEIVER_EFUSE_ATTR_ID(22),
+    TRANSCEIVER_EFUSE_ATTR_ID(23),
+    TRANSCEIVER_EFUSE_ATTR_ID(24),
+    TRANSCEIVER_EFUSE_ATTR_ID(25),
+    TRANSCEIVER_EFUSE_ATTR_ID(26),
+    TRANSCEIVER_EFUSE_ATTR_ID(27),
+    TRANSCEIVER_EFUSE_ATTR_ID(28),
+    TRANSCEIVER_EFUSE_ATTR_ID(29),
+    TRANSCEIVER_EFUSE_ATTR_ID(30),
+    TRANSCEIVER_EFUSE_ATTR_ID(31),
+    TRANSCEIVER_EFUSE_ATTR_ID(32),
+    TRANSCEIVER_EFUSE_ATTR_ID(33),
+    TRANSCEIVER_EFUSE_ATTR_ID(34),
+    TRANSCEIVER_EFUSE_ATTR_ID(35),
+    TRANSCEIVER_EFUSE_ATTR_ID(36),
+    TRANSCEIVER_EFUSE_ATTR_ID(37),
+    TRANSCEIVER_EFUSE_ATTR_ID(38),
+    TRANSCEIVER_EFUSE_ATTR_ID(39),
+    TRANSCEIVER_EFUSE_ATTR_ID(40),
+    TRANSCEIVER_EFUSE_ATTR_ID(41),
+    TRANSCEIVER_EFUSE_ATTR_ID(42),
+    TRANSCEIVER_EFUSE_ATTR_ID(43),
+    TRANSCEIVER_EFUSE_ATTR_ID(44),
+    TRANSCEIVER_EFUSE_ATTR_ID(45),
+    TRANSCEIVER_EFUSE_ATTR_ID(46),
+    TRANSCEIVER_EFUSE_ATTR_ID(47),
+    TRANSCEIVER_EFUSE_ATTR_ID(48),
     /* QSFP-DD LP MODE and RESET */
+    TRANSCEIVER_ENABLE_ATTR_ID(49),
+    TRANSCEIVER_ENABLE_ATTR_ID(50),
     TRANSCEIVER_RESET_ATTR_ID(49),
     TRANSCEIVER_RESET_ATTR_ID(50),
     TRANSCEIVER_LPMODE_ATTR_ID(49),
     TRANSCEIVER_LPMODE_ATTR_ID(50),
-    /* MODULE_RESET_ALL, */
     FPGA_VERSION,
     CPLD1_VERSION,
     CPLD2_VERSION,
@@ -403,12 +454,14 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
         static SENSOR_DEVICE_ATTR(module_present_##index, S_IRUGO, status_read, NULL, MODULE_PRESENT_##index); \
         static SENSOR_DEVICE_ATTR(module_rx_los_##index, S_IRUGO, status_read, NULL, MODULE_RX_LOS_##index); \
         static SENSOR_DEVICE_ATTR(module_tx_fault_##index, S_IRUGO, status_read, NULL, MODULE_TX_FAULT_##index); \
-        static SENSOR_DEVICE_ATTR(module_tx_disable_##index, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_TX_DISABLE_##index)
+        static SENSOR_DEVICE_ATTR(module_tx_disable_##index, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_TX_DISABLE_##index); \
+        static SENSOR_DEVICE_ATTR(module_efuse_##index, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_EFUSE_##index)
 #define DECLARE_TRANSCEIVER_ATTR(index) \
         &sensor_dev_attr_module_present_##index.dev_attr.attr, \
         &sensor_dev_attr_module_rx_los_##index.dev_attr.attr, \
         &sensor_dev_attr_module_tx_fault_##index.dev_attr.attr, \
-        &sensor_dev_attr_module_tx_disable_##index.dev_attr.attr
+        &sensor_dev_attr_module_tx_disable_##index.dev_attr.attr, \
+        &sensor_dev_attr_module_efuse_##index.dev_attr.attr
 
 /* sfp 1-48 transceiver attributes */
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_ATTR(1);
@@ -460,6 +513,8 @@ DECLARE_TRANSCEIVER_SENSOR_DEVICE_ATTR(46);
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_ATTR(47);
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_ATTR(48);
 /* QSFP-DD 49, 50 */
+static SENSOR_DEVICE_ATTR(module_enable_49, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_ENABLE_49);
+static SENSOR_DEVICE_ATTR(module_enable_50, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_ENABLE_50);
 static SENSOR_DEVICE_ATTR(module_present_49, S_IRUGO, status_read, NULL, MODULE_PRESENT_49);
 static SENSOR_DEVICE_ATTR(module_present_50, S_IRUGO, status_read, NULL, MODULE_PRESENT_50);
 static SENSOR_DEVICE_ATTR(module_reset_49, S_IRUGO|S_IWUSR, status_read, status_write, MODULE_RESET_49);
@@ -519,6 +574,8 @@ static struct attribute *fpga_transceiver_attributes[] = {
     DECLARE_TRANSCEIVER_ATTR(46),
     DECLARE_TRANSCEIVER_ATTR(47),
     DECLARE_TRANSCEIVER_ATTR(48),
+    &sensor_dev_attr_module_enable_49.dev_attr.attr,
+    &sensor_dev_attr_module_enable_50.dev_attr.attr,
     &sensor_dev_attr_module_present_49.dev_attr.attr,
     &sensor_dev_attr_module_present_50.dev_attr.attr,
     &sensor_dev_attr_module_reset_49.dev_attr.attr,
@@ -574,6 +631,15 @@ static struct attribute_mapping attribute_mappings[] = {
     [MODULE_TX_DISABLE_26 ... MODULE_TX_DISABLE_33] = {MODULE_TX_DISABLE_26, XCVR_P32_P25_TXDIS_REG, 0},
     [MODULE_TX_DISABLE_34 ... MODULE_TX_DISABLE_41] = {MODULE_TX_DISABLE_34, XCVR_P40_P33_TXDIS_REG, 0},
     [MODULE_TX_DISABLE_42 ... MODULE_TX_DISABLE_48] = {MODULE_TX_DISABLE_42, XCVR_P47_P41_TXDIS_REG, 0},
+
+    [MODULE_EFUSE_1 ... MODULE_EFUSE_8] = {MODULE_EFUSE_1, XCVR_P7_P0_EFUSE_REG, 1},
+    [MODULE_EFUSE_9 ... MODULE_EFUSE_16] = {MODULE_EFUSE_9, XCVR_P15_P8_EFUSE_REG, 1},
+    [MODULE_EFUSE_17 ... MODULE_EFUSE_24] = {MODULE_EFUSE_17, XCVR_P23_P16_EFUSE_REG, 1},
+    [MODULE_EFUSE_25] = {MODULE_EFUSE_25, XCVR_P24_EFUSE_REG, 1},
+    [MODULE_EFUSE_26 ... MODULE_EFUSE_33] = {MODULE_EFUSE_26, XCVR_P32_P25_EFUSE_REG, 1},
+    [MODULE_EFUSE_34 ... MODULE_EFUSE_41] = {MODULE_EFUSE_34, XCVR_P40_P33_EFUSE_REG, 1},
+    [MODULE_EFUSE_42 ... MODULE_EFUSE_48] = {MODULE_EFUSE_42, XCVR_P47_P41_EFUSE_REG, 1},
+
 };
 
 static inline unsigned int fpga_read(void __iomem *addr, u32 spi_mask)
@@ -632,6 +698,7 @@ static ssize_t status_read(struct device *dev, struct device_attribute *da, char
         case MODULE_RX_LOS_1 ... MODULE_RX_LOS_48:
         case MODULE_TX_FAULT_1 ... MODULE_TX_FAULT_48:
         case MODULE_TX_DISABLE_1 ... MODULE_TX_DISABLE_48:
+        case MODULE_EFUSE_1 ... MODULE_EFUSE_48:
             reg = attribute_mappings[attr->index].reg;
             LOCK(&cpld_access_lock);
             if ((reg & 0xF000) == CPLD1_PCIE_START_OFFSET) {
@@ -671,7 +738,15 @@ static ssize_t status_read(struct device *dev, struct device_attribute *da, char
             reg_val = fpga_read(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P49_P48_QSFPDD_RST_REG, SPI_BUSY_MASK_CPLD2);
             UNLOCK(&cpld_access_lock);
             bits_shift = attr->index - MODULE_RESET_49;
-            reg_val = !((reg_val >> ( bits_shift)) & 0x01);
+            reg_val = !((reg_val >> (bits_shift)) & 0x01);
+            ret = sprintf(buf, "%u\n", reg_val);
+            break;
+        case MODULE_ENABLE_49 ... MODULE_ENABLE_50:
+            LOCK(&cpld_access_lock);
+            reg_val = fpga_read(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P49_P48_EN_REG, SPI_BUSY_MASK_CPLD2);
+            UNLOCK(&cpld_access_lock);
+            bits_shift = attr->index - MODULE_ENABLE_49;
+            reg_val = (reg_val >> bits_shift) & 0x01;
             ret = sprintf(buf, "%u\n", reg_val);
             break;
         default:
@@ -738,10 +813,22 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
             reg = XCVR_P49_P48_QSFPDD_RST_REG;
             spi_mask = SPI_BUSY_MASK_CPLD2;
             reg_val = fpga_read(addr + reg, spi_mask);
-            bit_mask = 0x01 << (attr->index - MODULE_LPMODE_49 + 2);
+            bit_mask = 0x01 << (attr->index - MODULE_RESET_49);
             reg_val &= ~bit_mask;
             fpga_write(addr + reg, reg_val, spi_mask);
             UNLOCK(&cpld_access_lock);
+            break;
+        case MODULE_ENABLE_49 ... MODULE_ENABLE_50:
+            LOCK(&cpld_access_lock);
+            reg = XCVR_P49_P48_EN_REG;
+            spi_mask = SPI_BUSY_MASK_CPLD2;
+            reg_val = fpga_read(addr + reg, spi_mask);
+            bit_mask = 0x01 << (attr->index - MODULE_ENABLE_49);
+            reg_val &= ~bit_mask;
+            fpga_write(addr + reg, reg_val, spi_mask);
+            UNLOCK(&cpld_access_lock);
+            break;
+        default:
             break;
     }
 
@@ -942,17 +1029,6 @@ static int as7927_50x_pcie_fpga_stat_probe(struct platform_device *pdev)
     dev_info(dev, "(BAR%d resource: Start=0x%lx, Length=0x%x)", BAR0_NUM,
                   (unsigned long)fpga_ctl->pci_fpga_dev.data_region2, REGION_LEN);
 
-    /* enable all port */
-    /* Enable SFP 1-25 */
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P7_P0_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD1);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P15_P8_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD1);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P23_P16_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD1);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P24_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD1);
-    /* Enable SFP 26-48, QSFP-DD 49 and 50 */
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P32_P25_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD2);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P40_P33_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD2);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P47_P41_EFUSE_REG, 0, SPI_BUSY_MASK_CPLD2);
-    fpga_write(fpga_ctl->pci_fpga_dev.data_base_addr0 + XCVR_P49_P48_EN_REG, 0, SPI_BUSY_MASK_CPLD2);
     /* Create I2C ocore devices first, then create the FPGA sysfs.
      * To prevent the application from accessing an ocore device
      * that has not been fully created due to the port status
