@@ -45,8 +45,6 @@
 #define IPMI_CPLD_DCSCM_CMD            0x06 // Since addr conflicts with FPGA, replaced by 0x06
 #define IPMI_CPLD_FPGA_CMD             0x60
 #define IPMI_CPLD_SYS_CMD              0x61
-#define IPMI_CPLD_PORT_CPLD1_CMD       0x62
-#define IPMI_CPLD_PORT_CPLD2_CMD       0x63
 
 static int as7927_50x_sys_probe(struct platform_device *pdev);
 static int as7927_50x_sys_remove(struct platform_device *pdev);
@@ -78,8 +76,6 @@ static struct platform_driver as7927_50x_sys_driver = {
 enum as5916_54xks_sys_sysfs_attrs {
     COM_E_CPLD,
     FPGA_CPLD,
-    PORT_CPLD1,
-    PORT_CPLD2,
     FAN_CPLD,
     DCSCM_CPLD,
     SYS_CPLD
@@ -87,8 +83,6 @@ enum as5916_54xks_sys_sysfs_attrs {
 /* Functions to talk to the IPMI layer */
 static SENSOR_DEVICE_ATTR(come_e_cpld_ver, S_IRUGO, show_cpld_version, NULL, COM_E_CPLD);
 static SENSOR_DEVICE_ATTR(fpga_cpld_ver, S_IRUGO, show_cpld_version, NULL, FPGA_CPLD);
-static SENSOR_DEVICE_ATTR(port_cpld1_ver, S_IRUGO, show_cpld_version, NULL, PORT_CPLD1);
-static SENSOR_DEVICE_ATTR(port_cpld2_ver, S_IRUGO, show_cpld_version, NULL, PORT_CPLD2);
 static SENSOR_DEVICE_ATTR(fan_cpld_ver, S_IRUGO, show_cpld_version, NULL, FAN_CPLD);
 static SENSOR_DEVICE_ATTR(dcscm_cpld_ver, S_IRUGO, show_cpld_version, NULL, DCSCM_CPLD);
 static SENSOR_DEVICE_ATTR(sys_cpld_ver, S_IRUGO, show_cpld_version, NULL, SYS_CPLD);
@@ -96,8 +90,6 @@ static SENSOR_DEVICE_ATTR(sys_cpld_ver, S_IRUGO, show_cpld_version, NULL, SYS_CP
 static struct attribute *as7927_50x_sys_attributes[] = {
     &sensor_dev_attr_come_e_cpld_ver.dev_attr.attr,
     &sensor_dev_attr_fpga_cpld_ver.dev_attr.attr,
-    &sensor_dev_attr_port_cpld1_ver.dev_attr.attr,
-    &sensor_dev_attr_port_cpld2_ver.dev_attr.attr,
     &sensor_dev_attr_fan_cpld_ver.dev_attr.attr,
     &sensor_dev_attr_dcscm_cpld_ver.dev_attr.attr,
     &sensor_dev_attr_sys_cpld_ver.dev_attr.attr,
@@ -235,12 +227,6 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
             break;
         case FPGA_CPLD:
             cpld_addr = IPMI_CPLD_FPGA_CMD;
-            break;
-        case PORT_CPLD1:
-            cpld_addr = IPMI_CPLD_PORT_CPLD1_CMD;
-            break;
-        case PORT_CPLD2:
-            cpld_addr = IPMI_CPLD_PORT_CPLD2_CMD;
             break;
         case FAN_CPLD:
             cpld_addr = IPMI_CPLD_FAN_CMD;
