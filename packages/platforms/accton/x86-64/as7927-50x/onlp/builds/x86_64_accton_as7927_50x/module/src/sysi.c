@@ -46,8 +46,8 @@ static char* cpld_ver_path[NUM_OF_CPLD_VER] = {
     "/sys/bus/platform/devices/as7927_50x_sys/dcscm_cpld_ver",
     "/sys/bus/platform/devices/as7927_50x_sys/fpga_cpld_ver",
     "/sys/bus/platform/devices/as7927_50x_sys/fan_cpld_ver",
-    "/sys/bus/platform/devices/as7927_50x_sys/port_cpld1_ver",
-    "/sys/bus/platform/devices/as7927_50x_sys/port_cpld2_ver"
+    "/sys/bus/platform/devices/as7927_50x_fpga/cpld1_version",
+    "/sys/bus/platform/devices/as7927_50x_fpga/cpld2_version",
 };
 
 const char*
