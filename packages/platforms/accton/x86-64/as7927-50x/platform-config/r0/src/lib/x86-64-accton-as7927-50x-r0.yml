@@ -24,6 +24,9 @@ x86-64-accton-as7927-50x-r0:
       nopat
       console=ttyS0,115200n8
       intel_iommu=off
+      pcie_aspm=off
+      intremap=off
+      quiet
 
   ##network
   ##  interfaces:
