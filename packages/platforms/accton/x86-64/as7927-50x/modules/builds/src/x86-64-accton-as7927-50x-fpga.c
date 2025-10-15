@@ -668,7 +668,7 @@ static ssize_t status_read(struct device *dev, struct device_attribute *da, char
         case FPGA_VERSION:
             major = ioread8(fpga_ctl->pci_fpga_dev.data_base_addr0 + FPGA_MAJOR_VER_REG);
             minor = ioread8(fpga_ctl->pci_fpga_dev.data_base_addr0 + FPGA_MINOR_VER_REG);
-            ret = sprintf(buf, "%d.%d\n", major, minor);
+            ret = sprintf(buf, "%x.%x\n", major, minor);
             break;
         case CPLD1_VERSION:
             LOCK(&cpld_access_lock);
@@ -680,7 +680,7 @@ static ssize_t status_read(struct device *dev, struct device_attribute *da, char
                               SPI_BUSY_MASK_CPLD1);
             UNLOCK(&cpld_access_lock);
 
-            ret = sprintf(buf, "%d.%d\n", major, minor);
+            ret = sprintf(buf, "%x.%X\n", major, minor);
             break;
         case CPLD2_VERSION:
             LOCK(&cpld_access_lock);
@@ -692,7 +692,7 @@ static ssize_t status_read(struct device *dev, struct device_attribute *da, char
                               SPI_BUSY_MASK_CPLD2);
             UNLOCK(&cpld_access_lock);
 
-            ret = sprintf(buf, "%d.%d\n", major, minor);
+            ret = sprintf(buf, "%x.%x\n", major, minor);
             break;
         case MODULE_PRESENT_1 ... MODULE_PRESENT_48:
         case MODULE_RX_LOS_1 ... MODULE_RX_LOS_48:

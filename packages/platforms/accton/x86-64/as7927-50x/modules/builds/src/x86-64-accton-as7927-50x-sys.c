@@ -253,9 +253,9 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
     major = data->ipmi_resp_cpld[0];
     mutex_unlock(&data->update_lock);
     if (attr->index == DCSCM_CPLD)
-        return snprintf(buf, 32, "%d\n", major);
+        return snprintf(buf, 32, "%x\n", major);
     minor = data->ipmi_resp_cpld[1];
-    return snprintf(buf, 32, "%d.%d\n", major, minor);
+    return snprintf(buf, 32, "%x.%x\n", major, minor);
 
 exit:
     mutex_unlock(&data->update_lock);
