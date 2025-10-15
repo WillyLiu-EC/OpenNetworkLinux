@@ -57,7 +57,7 @@ struct as7927_50x_sys_data {
     unsigned long    last_updated;    /* In jiffies */
     struct ipmi_data ipmi;
     unsigned char    ipmi_resp_eeprom[EEPROM_SIZE];
-    unsigned char    ipmi_resp_cpld[2];
+    unsigned char    ipmi_resp_cpld[4];
     unsigned char    ipmi_tx_data[2];
     struct bin_attribute eeprom;      /* eeprom data */
 };
@@ -254,7 +254,12 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
     mutex_unlock(&data->update_lock);
     if (attr->index == DCSCM_CPLD)
         return snprintf(buf, 32, "%x\n", major);
-    minor = data->ipmi_resp_cpld[1];
+    else if (attr->index == COM_E_CPLD){
+        major = data->ipmi_resp_cpld[2];
+        minor = data->ipmi_resp_cpld[3];
+    }
+    else
+        minor = data->ipmi_resp_cpld[1];
     return snprintf(buf, 32, "%x.%x\n", major, minor);
 
 exit:
