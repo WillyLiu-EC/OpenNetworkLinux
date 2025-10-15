@@ -43,6 +43,9 @@
 #define FAN_SYSFS_FORMAT_1 "/sys/devices/platform/as7927_50x_fan/hwmon/hwmon%d/%s"
 #define SYS_LED_PATH   "/sys/devices/platform/as7927_50x_led/"
 #define IDPROM_PATH "/sys/bus/platform/devices/as7927_50x_sys/eeprom"
+#define BIOS_VER_PATH  "/sys/devices/virtual/dmi/id/bios_version"
+#define BMC_VER1_PATH  "/sys/devices/platform/ipmi_bmc.0/firmware_revision"
+#define BMC_VER2_PATH  "/sys/devices/platform/ipmi_bmc.0/aux_firmware_revision"
 
 enum onlp_thermal_id {
     THERMAL_RESERVED = 0,
