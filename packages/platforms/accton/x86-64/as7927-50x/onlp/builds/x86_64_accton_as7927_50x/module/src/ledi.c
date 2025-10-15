@@ -112,7 +112,7 @@ static onlp_led_info_t linfo[] =
     {
         { ONLP_LED_ID_CREATE(LED_ALARM), "Chassis LED 3 (ALARM LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
-        ONLP_LED_CAPS_AUTO,
+        ONLP_LED_CAPS_ON_OFF | ONLP_LED_CAPS_RED,
     },
     {
         { ONLP_LED_ID_CREATE(LED_FAN), "Chassis LED 4 (FAN LED)", 0, {0} },
