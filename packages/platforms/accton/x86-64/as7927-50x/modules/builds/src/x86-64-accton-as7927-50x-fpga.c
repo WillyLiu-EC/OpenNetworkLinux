@@ -777,6 +777,27 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
     switch(attr->index)
     {
 
+        case MODULE_EFUSE_1 ... MODULE_EFUSE_48:
+            reg = attribute_mappings[attr->index].reg;
+            if ((reg & 0xF000) == CPLD1_PCIE_START_OFFSET) {
+                spi_mask = SPI_BUSY_MASK_CPLD1;
+            } else if ((reg & 0xF000) == CPLD2_PCIE_START_OFFSET) {
+                spi_mask = SPI_BUSY_MASK_CPLD2;
+            }
+
+            bit_mask = 0x01 << (attr->index - attribute_mappings[attr->index].attr_base);
+            should_set_bit = attribute_mappings[attr->index].revert ? !input : input;
+
+            LOCK(&cpld_access_lock);
+            reg_val = fpga_read(addr + reg, spi_mask);
+            if (should_set_bit) {
+                reg_val |= bit_mask;
+            } else {
+                reg_val &= ~bit_mask;
+            }
+            fpga_write(addr + reg, reg_val, spi_mask);
+            UNLOCK(&cpld_access_lock);
+            break;
         case MODULE_TX_DISABLE_1 ... MODULE_TX_DISABLE_48:
             reg = attribute_mappings[attr->index].reg;
             if ((reg & 0xF000) == CPLD1_PCIE_START_OFFSET) {
