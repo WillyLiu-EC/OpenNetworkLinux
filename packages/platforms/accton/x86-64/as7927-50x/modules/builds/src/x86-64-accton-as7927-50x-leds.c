@@ -237,12 +237,6 @@ static ssize_t set_led(struct device *dev, struct device_attribute *da,
 
     mutex_lock(&data->update_lock);
 
-    data = as7927_50x_led_update_device();
-    if (!data->valid) {
-        status = -EIO;
-        goto exit;
-    }
-
     data->ipmi_resp[0] = attr->index + 1;
 
     switch (mode) {
