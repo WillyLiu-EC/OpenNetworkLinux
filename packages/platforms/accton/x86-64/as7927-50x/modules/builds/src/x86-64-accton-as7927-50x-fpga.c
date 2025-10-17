@@ -825,7 +825,12 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
             spi_mask = SPI_BUSY_MASK_CPLD2;
             reg_val = fpga_read(addr + reg, spi_mask);
             bit_mask = 0x01 << (attr->index - MODULE_LPMODE_49 + 2);
-            reg_val |= bit_mask;
+            should_set_bit = input;
+            if (should_set_bit) {
+                reg_val |= bit_mask;
+            } else {
+                reg_val &= ~bit_mask;
+            }
             fpga_write(addr + reg, reg_val, spi_mask);
             UNLOCK(&cpld_access_lock);
             break;
@@ -835,7 +840,12 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
             spi_mask = SPI_BUSY_MASK_CPLD2;
             reg_val = fpga_read(addr + reg, spi_mask);
             bit_mask = 0x01 << (attr->index - MODULE_RESET_49);
-            reg_val &= ~bit_mask;
+            should_set_bit = !input;
+            if (should_set_bit) {
+                reg_val |= bit_mask;
+            } else {
+                reg_val &= ~bit_mask;
+            }
             fpga_write(addr + reg, reg_val, spi_mask);
             UNLOCK(&cpld_access_lock);
             break;
@@ -845,7 +855,12 @@ static ssize_t status_write(struct device *dev, struct device_attribute *da,
             spi_mask = SPI_BUSY_MASK_CPLD2;
             reg_val = fpga_read(addr + reg, spi_mask);
             bit_mask = 0x01 << (attr->index - MODULE_ENABLE_49);
-            reg_val &= ~bit_mask;
+            should_set_bit = input;
+            if (should_set_bit) {
+                reg_val |= bit_mask;
+            } else {
+                reg_val &= ~bit_mask;
+            }
             fpga_write(addr + reg, reg_val, spi_mask);
             UNLOCK(&cpld_access_lock);
             break;

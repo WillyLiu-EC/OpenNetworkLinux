@@ -37,7 +37,7 @@
 
 #define VALIDATE_QSFP(_port) \
     do { \
-        if (_port < 48 || _port > 50 ) \
+        if (_port < 49 || _port > 50 ) \
             return ONLP_STATUS_E_UNSUPPORTED; \
     } while(0)
 
