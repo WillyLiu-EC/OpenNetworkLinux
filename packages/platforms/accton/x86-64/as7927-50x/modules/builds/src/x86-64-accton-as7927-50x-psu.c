@@ -42,6 +42,9 @@
 #define IPMI_MODEL_SERIAL_LEN 32
 #define IPMI_FAN_DIR_LEN 3
 
+#define MAX_AC_PSU_FAN_SPEED 22000
+#define MAX_DC_PSU_FAN_SPEED 30000
+
 static ssize_t show_psu(struct device *dev, struct device_attribute *attr,
                             char *buf);
 static ssize_t show_psu_info(struct device *dev, struct device_attribute *attr,
@@ -97,7 +100,8 @@ enum psu_data_index {
     PSU_STATUS_COUNT,
     PSU_MODEL = 0,
     PSU_SERIAL = 0,
-    PSU_TEMP1_MAX0 = 2,
+    PSU_TYPE = 1,
+    PSU_TEMP1_MAX0,
     PSU_TEMP1_MAX1,
     PSU_TEMP1_MIN0,
     PSU_TEMP1_MIN1,
@@ -194,6 +198,7 @@ static struct platform_driver as7927_50x_psu_driver = {
 #define PSU_FAN_INPUT_ATTR_ID(index) PSU##index##_FAN_INPUT
 #define PSU_FAN_DIR_ATTR_ID(index) PSU##index##_FAN_DIR
 
+#define PSU_FAN_SPEED_MAX_ATTR_ID(index) PSU##index##_FAN_SPEED_MAX
 #define PSU_TEMP1_INPUT_MAX_ATTR_ID(index) PSU##index##_TEMP1_INPUT_MAX
 #define PSU_TEMP1_INPUT_MIN_ATTR_ID(index) PSU##index##_TEMP1_INPUT_MIN
 #define PSU_TEMP2_INPUT_MAX_ATTR_ID(index) PSU##index##_TEMP2_INPUT_MAX
@@ -229,6 +234,7 @@ static struct platform_driver as7927_50x_psu_driver = {
     PSU_TEMP3_INPUT_ATTR_ID(psu_id), \
     PSU_FAN_INPUT_ATTR_ID(psu_id), \
     PSU_FAN_DIR_ATTR_ID(psu_id), \
+    PSU_FAN_SPEED_MAX_ATTR_ID(psu_id), \
     PSU_TEMP1_INPUT_MAX_ATTR_ID(psu_id), \
     PSU_TEMP1_INPUT_MIN_ATTR_ID(psu_id), \
     PSU_TEMP2_INPUT_MAX_ATTR_ID(psu_id), \
@@ -290,6 +296,8 @@ enum as7927_50x_psu_sysfs_attrs {
                                 PSU##index##_FAN_INPUT); \
     static SENSOR_DEVICE_ATTR(psu##index##_fan_dir, S_IRUGO, show_string, NULL,\
                                 PSU##index##_FAN_DIR); \
+    static SENSOR_DEVICE_ATTR(psu##index##_fan_speed_max, S_IRUGO, \
+                        show_psu_info, NULL, PSU##index##_FAN_SPEED_MAX); \
     static SENSOR_DEVICE_ATTR(psu##index##_temp1_input_max, S_IRUGO, \
                         show_psu_info, NULL, PSU##index##_TEMP1_INPUT_MAX); \
     static SENSOR_DEVICE_ATTR(psu##index##_temp1_input_min, S_IRUGO, \
@@ -341,6 +349,7 @@ enum as7927_50x_psu_sysfs_attrs {
     &sensor_dev_attr_psu##index##_temp3_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_fan1_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_fan_dir.dev_attr.attr, \
+    &sensor_dev_attr_psu##index##_fan_speed_max.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp1_input_max.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp1_input_min.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp2_input_max.dev_attr.attr, \
@@ -672,6 +681,12 @@ static ssize_t show_psu_info(struct device *dev, struct device_attribute *da,
     present = !!(data->ipmi_resp[pid].status[PSU_PRESENT]);
 
     switch (attr->index) {
+    case PSU1_FAN_SPEED_MAX:
+    case PSU2_FAN_SPEED_MAX:
+        VALIDATE_PRESENT_RETURN(pid);
+        int psu_type = data->ipmi_resp[pid].info[PSU_TYPE];
+        value = (psu_type==1) ? MAX_AC_PSU_FAN_SPEED : MAX_DC_PSU_FAN_SPEED;
+        break;
     case PSU1_TEMP1_INPUT_MAX:
     case PSU2_TEMP1_INPUT_MAX:
         VALIDATE_PRESENT_RETURN(pid);

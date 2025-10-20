@@ -46,8 +46,6 @@ enum fan_id {
     FAN_1_ON_PSU_2
 };
 
-#define MAX_PSU_FAN_SPEED 25500
-
 #define CHASSIS_FAN_INFO(fid) \
     { \
         { ONLP_FAN_ID_CREATE(FAN_##fid##_ON_FAN_BOARD), "Chassis Fan - "#fid, 0, {0} },\
@@ -179,6 +177,7 @@ _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
     char *str = NULL;
     int   len = 0;
     int   val = 0;
+    int   max_speed = 0;
     int   ret = 0;
     int   hwmon_idx;
 
@@ -203,6 +202,14 @@ _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
         AIM_FREE_IF_PTR(str);
     }
 
+    /* get max fan speed
+     */
+     ret = onlp_file_read_int(&max_speed, PSU_SYSFS_FORMAT, pid, "fan_speed_max");
+     if (ret < 0) {
+         AIM_LOG_ERROR("Unable to read status from PSU(%d)\r\n", pid);
+         return ONLP_STATUS_E_INTERNAL;
+     }
+
     /* get fan speed
      */
     ret = onlp_file_read_int(&val, PSU_SYSFS_FORMAT, pid, "fan1_input");
@@ -211,7 +218,7 @@ _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
         return ONLP_STATUS_E_INTERNAL;
     }
     info->rpm = val;
-    info->percentage = (info->rpm * 100)/MAX_PSU_FAN_SPEED;
+    info->percentage = (info->rpm * 100)/max_speed;
 
     return ONLP_STATUS_OK;
 }
