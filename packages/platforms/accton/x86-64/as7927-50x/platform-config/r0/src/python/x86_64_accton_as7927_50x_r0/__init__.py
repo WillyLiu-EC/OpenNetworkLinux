@@ -81,7 +81,6 @@ class OnlPlatform_x86_64_accton_as7927_50x_r0(OnlPlatformAccton,
             return False
 
         self.modprobe('optoe')
-        self.modprobe('at24')
         self.modprobe('accton_ipmi_intf')
 
         for m in [ 'i2c-ocores', 'fpga', 'fan', 'psu', 'thermal', 'sys', 'leds']:
