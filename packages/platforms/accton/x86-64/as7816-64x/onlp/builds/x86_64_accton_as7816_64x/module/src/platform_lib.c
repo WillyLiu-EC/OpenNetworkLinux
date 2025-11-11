@@ -99,6 +99,8 @@ psu_type_t psu_type_get(int id, char* modelname, int modelname_len)
 	char  model[PSU_MODEL_NAME_LEN + 1] = {0};
     char *prefix = psu_pmbus_path(id);
     char  fan_dir[PSU_FAN_DIR_LEN + 1] = {0};
+    char  *model_string = NULL;
+    int len = 0;
 
 	if (modelname && modelname_len < PSU_MODEL_NAME_LEN) {
 		return PSU_TYPE_UNKNOWN;
@@ -114,24 +116,36 @@ psu_type_t psu_type_get(int id, char* modelname, int modelname_len)
 	if (!value) {
 		return PSU_TYPE_UNKNOWN;
 	}
-
-	/* Read mode name */
-	ret = onlp_file_read((uint8_t*)model, PSU_MODEL_NAME_LEN, &value, "%s%s", prefix, "psu_mfr_model");
+    /* Read full model name for PSU except 3y PSU */
+    len = onlp_file_read_str(&model_string, "%spsu_mfr_model", prefix);
+    if (!model_string || len <= 0)
+    {
+        AIM_FREE_IF_PTR(model_string);
+        return PSU_TYPE_UNKNOWN;
+    }
+    if (modelname)
+        strcpy(modelname, model_string);
+    if ((strstr(model_string, "DPS-850AB-5") != NULL)){
+        ret = onlp_file_read((uint8_t*)fan_dir, PSU_FAN_DIR_LEN, &value, "%s%s", prefix, "psu_fan_dir");
+        if (strncmp(fan_dir, "B2F", strlen("B2F")) == 0)
+        {
+            AIM_FREE_IF_PTR(model_string);
+            return PSU_TYPE_AC_DPS850_B2F;
+        }
+        else
+        {
+            AIM_FREE_IF_PTR(model_string);
+            return PSU_TYPE_AC_DPS850_F2B;
+        }
+    }
+    /* Read mode name */
+    ret = onlp_file_read((uint8_t*)model, PSU_MODEL_NAME_LEN, &value, "%s%s", prefix, "psu_mfr_model");
     if (ret != ONLP_STATUS_OK || value != PSU_MODEL_NAME_LEN) {
-		return PSU_TYPE_UNKNOWN;
-
+        return PSU_TYPE_UNKNOWN;
     }
 
     if (modelname) {
-		memcpy(modelname, model, sizeof(model));
-    }
-
-    if (strncmp(model, "DPS-850A", strlen("DPS-850A")) == 0) {
-        ret = onlp_file_read((uint8_t*)fan_dir, PSU_FAN_DIR_LEN, &value, "%s%s", prefix, "psu_fan_dir");
-        if (strncmp(fan_dir, "B2F", strlen("B2F")) == 0) {
-            return PSU_TYPE_AC_DPS850_B2F;
-        }
-        return PSU_TYPE_AC_DPS850_F2B;
+        memcpy(modelname, model, sizeof(model));
     }
 
     if (strncmp(model, "YM-2851F", strlen("YM-2851F")) == 0) {
@@ -176,7 +190,6 @@ psu_type_t psu_type_get(int id, char* modelname, int modelname_len)
         if ((strncmp(fan_dir, "B2F", strlen("B2F")) == 0) || (strncmp(fan_dir, "AFI", strlen("AFI")) == 0)) {
             return PSU_TYPE_DC_YM2851JFR_B2F;
         }
-
 
         return PSU_TYPE_DC_YM2851JER_F2B; /* YM-2851JER */
     }

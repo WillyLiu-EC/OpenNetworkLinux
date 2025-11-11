@@ -100,6 +100,15 @@ int psu_ym2651y_pmbus_info_set(int id, char *node, int value);
 int psu_dps850_pmbus_info_get(int id, char *node, int *value);
 char* psu_pmbus_path(int pid);
 
+#define AIM_FREE_IF_PTR(p) \
+            do \
+            { \
+                if (p) { \
+                    aim_free(p); \
+                    p = NULL; \
+                } \
+            } while (0)
+
 #define DEBUG_MODE 0
 
 #if (DEBUG_MODE == 1)
