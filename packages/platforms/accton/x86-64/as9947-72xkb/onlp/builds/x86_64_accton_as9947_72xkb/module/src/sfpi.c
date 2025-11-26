@@ -29,29 +29,31 @@
 #include "x86_64_accton_as9947_72xkb_int.h"
 #include "x86_64_accton_as9947_72xkb_log.h"
 
+#define NUM_OF_PORT 76
+#define NUM_OF_QSFP_PORT 72
+#define NUM_OF_SFP_PORT 4
+
+
 #define VALIDATE_SFP(_port) \
     do { \
-        if (_port < 73 || _port > 76) \
+        if (_port < (NUM_OF_QSFP_PORT + 1) || _port > NUM_OF_PORT) \
             return ONLP_STATUS_E_UNSUPPORTED; \
     } while(0)
 
 #define VALIDATE_QSFP(_port) \
     do { \
-        if (_port < 1 || _port > 72 ) \
+        if (_port < 1 || _port > NUM_OF_QSFP_PORT ) \
             return ONLP_STATUS_E_UNSUPPORTED; \
     } while(0)
 
 #define MODULE_EEPROM_FORMAT       "/sys/bus/i2c/devices/%d-0050/eeprom"
-#define MODULE_PRESENT_FORMAT      "/sys/devices/platform/as9947_72xkb_fpga/module_present_%d"
-#define MODULE_RXLOS_FORMAT        "/sys/devices/platform/as9947_72xkb_fpga/module_rx_los_%d"
-#define MODULE_TXFAULT_FORMAT      "/sys/devices/platform/as9947_72xkb_fpga/module_tx_fault_%d"
-#define MODULE_TXDISABLE_FORMAT    "/sys/devices/platform/as9947_72xkb_fpga/module_tx_disable_%d"
-#define MODULE_RESET_FORMAT        "/sys/devices/platform/as9947_72xkb_fpga/module_reset_%d"
-#define MODULE_LPMODE_FORMAT       "/sys/devices/platform/as9947_72xkb_fpga/module_lp_mode_%d"
+#define MODULE_PRESENT_FORMAT      "/sys/devices/platform/as9947_72xkb_sfp/module_present_%d"
+#define MODULE_RXLOS_FORMAT        "/sys/devices/platform/as9947_72xkb_sfp/module_rx_los_%d"
+#define MODULE_TXFAULT_FORMAT      "/sys/devices/platform/as9947_72xkb_sfp/module_tx_fault_%d"
+#define MODULE_TXDISABLE_FORMAT    "/sys/devices/platform/as9947_72xkb_sfp/module_tx_disable_%d"
+#define MODULE_RESET_FORMAT        "/sys/devices/platform/as9947_72xkb_sfp/module_reset_%d"
+#define MODULE_LPMODE_FORMAT       "/sys/devices/platform/as9947_72xkb_sfp/module_lpmode_%d"
 
-#define NUM_OF_PORT 76
-#define NUM_OF_QSFP_PORT 72
-#define NUM_OF_SFP_PORT 4
 static const int port_bus_index[NUM_OF_PORT] = {
      1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
@@ -116,7 +118,6 @@ int onlp_sfpi_rx_los_bitmap_get(onlp_sfp_bitmap_t* dst)
     }
 
     for (i = 73; i <= NUM_OF_PORT; i++)
-
     {
         /* check present */
         if (onlp_sfpi_is_present(i))
@@ -125,12 +126,17 @@ int onlp_sfpi_rx_los_bitmap_get(onlp_sfp_bitmap_t* dst)
                 AIM_LOG_ERROR("Unable to read rx_loss status from port(%d)\r\n", i);
                 return ONLP_STATUS_E_INTERNAL;
             }
-        }
 
-        if (value)
-            AIM_BITMAP_MOD(dst, i, 1);
+            if (value)
+                AIM_BITMAP_MOD(dst, i, 1);
+            else
+                AIM_BITMAP_MOD(dst, i, 0);
+
+        }
         else
+        {
             AIM_BITMAP_MOD(dst, i, 0);
+        }
     }
 
     return ONLP_STATUS_OK;
