@@ -55,9 +55,7 @@
 #define IPMI_ERR_RETRY_TIMES 1
 
 static void ipmi_msg_handler(struct ipmi_recv_msg *msg, void *user_msg_data);
-static ssize_t show_sled_present(struct device *dev, struct device_attribute *attr,
-            char *buf);
-static ssize_t show_sled_power_status(struct device *dev, struct device_attribute *attr,
+static ssize_t show_sled_status(struct device *dev, struct device_attribute *attr,
             char *buf);
 static int amx3200_sled_probe(struct platform_device *pdev);
 static int amx3200_sled_remove(struct platform_device *pdev);
@@ -84,7 +82,7 @@ struct amx3200_sled_data {
     struct mutex update_lock;
     char valid;           /* != 0 if registers are valid */
     unsigned long last_updated;    /* In jiffies */
-    unsigned char ipmi_resp;
+    unsigned char ipmi_resp[4];
     struct ipmi_data ipmi;
     unsigned char ipmi_tx_data[3];
 };
@@ -108,13 +106,13 @@ enum amx3200_sled_sysfs_attrs {
     SLED2_ALL_POWER_GOOD,
 };
 
-static SENSOR_DEVICE_ATTR(sled_1_present, S_IWUSR | S_IRUGO, show_sled_present, NULL,
+static SENSOR_DEVICE_ATTR(sled_1_present, S_IRUGO, show_sled_status, NULL,
                             SLED1_PRESENT);
-static SENSOR_DEVICE_ATTR(sled_2_present, S_IWUSR | S_IRUGO, show_sled_present, NULL,
+static SENSOR_DEVICE_ATTR(sled_2_present, S_IRUGO, show_sled_status, NULL,
                             SLED2_PRESENT);
-static SENSOR_DEVICE_ATTR(sled_1_all_power_good, S_IWUSR | S_IRUGO, show_sled_power_status, NULL,
+static SENSOR_DEVICE_ATTR(sled_1_all_power_good, S_IRUGO, show_sled_status, NULL,
                             SLED1_ALL_POWER_GOOD);
-static SENSOR_DEVICE_ATTR(sled_2_all_power_good, S_IWUSR | S_IRUGO, show_sled_power_status, NULL,
+static SENSOR_DEVICE_ATTR(sled_2_all_power_good, S_IRUGO, show_sled_status, NULL,
                             SLED2_ALL_POWER_GOOD);
 
 static struct attribute *amx3200_sled_attributes[] = {
@@ -269,7 +267,7 @@ static void ipmi_msg_handler(struct ipmi_recv_msg *msg, void *user_msg_data)
     complete(&ipmi->read_complete);
 }
 
-static struct amx3200_sled_data *amx3200_sled_present_update_device(void)
+static struct amx3200_sled_data *amx3200_sled_update_device(void)
 {
     int status = 0;
     unsigned char set_data;
@@ -279,13 +277,15 @@ static struct amx3200_sled_data *amx3200_sled_present_update_device(void)
     }
 
     data->valid = 0;
+
+    /* Get value of interrupt mask register */
     data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
     data->ipmi_tx_data[1] = IPMI_SLED_INTERRUPT_MASK_CMD;
     /* Enable the interrupt mask before read the present status */
     /* Read the interrupt mask 0x26 */
     status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
                                 data->ipmi_tx_data, 2,
-                                &data->ipmi_resp, sizeof(data->ipmi_resp));
+                                &data->ipmi_resp[0], sizeof(data->ipmi_resp[0]));
     if (unlikely(status != 0)) {
         goto exit;
     }
@@ -295,7 +295,7 @@ static struct amx3200_sled_data *amx3200_sled_present_update_device(void)
         goto exit;
     }
     /* Enable the interrupt mask 0x26 bit0 and bit1 */
-    set_data = (data->ipmi_resp | IPMI_SLED1_INTERRUPT_MASK_VALUE |
+    set_data = (data->ipmi_resp[0] | IPMI_SLED1_INTERRUPT_MASK_VALUE |
                 IPMI_SLED2_INTERRUPT_MASK_VALUE);
     data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
     data->ipmi_tx_data[1] = IPMI_SLED_INTERRUPT_MASK_CMD;
@@ -311,12 +311,42 @@ static struct amx3200_sled_data *amx3200_sled_present_update_device(void)
         status = -EIO;
         goto exit;
     }
-
+    /* Get value of status */
     data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
     data->ipmi_tx_data[1] = IPMI_SLED_INTERRUPT_STATUS_CMD;
     status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
                                 data->ipmi_tx_data, 2,
-                                &data->ipmi_resp, sizeof(data->ipmi_resp));
+                                &data->ipmi_resp[1], sizeof(data->ipmi_resp[1]));
+    if (unlikely(status != 0)) {
+        goto exit;
+    }
+
+    if (unlikely(data->ipmi.rx_result != 0)) {
+        status = -EIO;
+        goto exit;
+    }
+    /*Get value of SLED1 all power good */
+    data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
+    data->ipmi_tx_data[1] = IPMI_SLED1_POWER_STATUS_CMD;
+    /* Enable the interrupt mask before read the present status */
+    /* Read the interrupt mask 0x26 */
+    status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
+                                data->ipmi_tx_data, 2,
+                                &data->ipmi_resp[2], sizeof(data->ipmi_resp[2]));
+    if (unlikely(status != 0)) {
+        goto exit;
+    }
+
+    if (unlikely(data->ipmi.rx_result != 0)) {
+        status = -EIO;
+        goto exit;
+    }
+    /*Get value of SLED2 all power good */
+    data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
+    data->ipmi_tx_data[1] = IPMI_SLED2_POWER_STATUS_CMD;
+    status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
+                                data->ipmi_tx_data, 2,
+                                &data->ipmi_resp[3], sizeof(data->ipmi_resp[3]));
     if (unlikely(status != 0)) {
         goto exit;
     }
@@ -335,7 +365,7 @@ exit:
 }
 
 
-static ssize_t show_sled_present(struct device *dev, struct device_attribute *da,
+static ssize_t show_sled_status(struct device *dev, struct device_attribute *da,
                             char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
@@ -344,7 +374,7 @@ static ssize_t show_sled_present(struct device *dev, struct device_attribute *da
 
     mutex_lock(&data->update_lock);
 
-    data = amx3200_sled_present_update_device();
+    data = amx3200_sled_update_device();
     if (!data->valid) {
         error = -EIO;
         goto exit;
@@ -352,115 +382,16 @@ static ssize_t show_sled_present(struct device *dev, struct device_attribute *da
 
     switch (attr->index) {
     case SLED1_PRESENT:
-        value = !(data->ipmi_resp & IPMI_SLED1_INTERRUPT_STATUS_BIT);
+        value = !(data->ipmi_resp[1] & IPMI_SLED1_INTERRUPT_STATUS_BIT);
         break;
     case SLED2_PRESENT:
-        value = !(data->ipmi_resp & IPMI_SLED2_INTERRUPT_STATUS_BIT);
+        value = !(data->ipmi_resp[1] & IPMI_SLED2_INTERRUPT_STATUS_BIT);
         break;
-    default:
-        error = -EINVAL;
-        goto exit;
-    }
-
-    mutex_unlock(&data->update_lock);
-    return sprintf(buf, "%d\n", value);
-
-exit:
-    mutex_unlock(&data->update_lock);
-    return error;
-}
-
-static struct amx3200_sled_data *amx3200_sled1_power_update_device(void)
-{
-    int status = 0;
-
-    if (time_before(jiffies, data->last_updated + HZ * 5) && data->valid) {
-        return data;
-    }
-
-    data->valid = 0;
-    data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
-    data->ipmi_tx_data[1] = IPMI_SLED1_POWER_STATUS_CMD;
-    /* Enable the interrupt mask before read the present status */
-    /* Read the interrupt mask 0x26 */
-    status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
-                                data->ipmi_tx_data, 2,
-                                &data->ipmi_resp, sizeof(data->ipmi_resp));
-    if (unlikely(status != 0)) {
-        goto exit;
-    }
-
-    if (unlikely(data->ipmi.rx_result != 0)) {
-        status = -EIO;
-        goto exit;
-    }
-
-    data->last_updated = jiffies;
-    data->valid = 1;
-
-
-exit:
-    return data;
-}
-
-static struct amx3200_sled_data *amx3200_sled2_power_update_device(void)
-{
-    int status = 0;
-
-    if (time_before(jiffies, data->last_updated + HZ * 5) && data->valid) {
-        return data;
-    }
-
-    data->valid = 0;
-    data->ipmi_tx_data[0] = IPMI_MAIN_CPLD_REG;
-    data->ipmi_tx_data[1] = IPMI_SLED2_POWER_STATUS_CMD;
-    /* Enable the interrupt mask before read the present status */
-    /* Read the interrupt mask 0x26 */
-    status = ipmi_send_message(&data->ipmi, IPMI_CPLD_READ_CMD,
-                                data->ipmi_tx_data, 2,
-                                &data->ipmi_resp, sizeof(data->ipmi_resp));
-    if (unlikely(status != 0)) {
-        goto exit;
-    }
-
-    if (unlikely(data->ipmi.rx_result != 0)) {
-        status = -EIO;
-        goto exit;
-    }
-
-    data->last_updated = jiffies;
-    data->valid = 1;
-
-
-exit:
-    return data;
-}
-
-static ssize_t show_sled_power_status(struct device *dev, struct device_attribute *da,
-                            char *buf)
-{
-    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    bool value = 0;
-    int error = 0;
-
-    mutex_lock(&data->update_lock);
-
-    switch (attr->index) {
     case SLED1_ALL_POWER_GOOD:
-        data = amx3200_sled1_power_update_device();
-        if (!data->valid) {
-            error = -EIO;
-            goto exit;
-        }
-        value = ((data->ipmi_resp & IPMI_SLED1_ALL_POWER_GOOD_BIT) >> 2);
+        value = ((data->ipmi_resp[2] & IPMI_SLED1_ALL_POWER_GOOD_BIT) >> 2);
         break;
     case SLED2_ALL_POWER_GOOD:
-        data = amx3200_sled2_power_update_device();
-        if (!data->valid) {
-            error = -EIO;
-            goto exit;
-        }
-        value = ((data->ipmi_resp & IPMI_SLED2_ALL_POWER_GOOD_BIT) >> 2);
+        value = ((data->ipmi_resp[3] & IPMI_SLED2_ALL_POWER_GOOD_BIT) >> 2);
         break;
     default:
         error = -EINVAL;
