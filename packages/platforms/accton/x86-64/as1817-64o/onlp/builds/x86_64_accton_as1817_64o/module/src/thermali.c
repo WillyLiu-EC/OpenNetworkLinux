@@ -36,6 +36,7 @@
 
 static char* devfiles__[] = { /* must map with onlp_thermal_id */
     NULL,
+    NULL,                  /* CPU_CORE files */
     "/sys/bus/platform/devices/as1817_64o_thermal/temp1_input",
     "/sys/bus/platform/devices/as1817_64o_thermal/temp2_input",
     "/sys/bus/platform/devices/as1817_64o_thermal/temp3_input",
@@ -65,9 +66,24 @@ static char* devfiles__[] = { /* must map with onlp_thermal_id */
     "/sys/bus/platform/devices/as1817_64o_psu/psu4_temp3_input",
 };
 
+static char* cpu_coretemp_files[] = {
+    "/sys/devices/platform/coretemp.0*temp1_input",
+    "/sys/devices/platform/coretemp.0*temp2_input",
+    "/sys/devices/platform/coretemp.0*temp3_input",
+    "/sys/devices/platform/coretemp.0*temp4_input",
+    "/sys/devices/platform/coretemp.0*temp5_input",
+    NULL,
+};
+
+
 /* Static values */
 static onlp_thermal_info_t tinfo[] = {
     { }, /* Not used */
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_CPU_CORE), "CPU Core", 0, {0} },
+        ONLP_THERMAL_STATUS_PRESENT,
+        ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
+    },
+
     {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_CARRIER_BOARD), "CB_RearCenter_temp(0x48)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
@@ -202,5 +218,10 @@ onlp_thermali_info_get(onlp_oid_t id, onlp_thermal_info_t* info)
     tid = ONLP_OID_ID_GET(id);
     *info = tinfo[tid];
 
+    if (tid == THERMAL_CPU_CORE) {
+        return onlp_file_read_int_max(&info->mcelsius, cpu_coretemp_files);
+    }
+
     return onlp_file_read_int(&info->mcelsius, devfiles__[tid]);
 }
+

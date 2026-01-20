@@ -45,6 +45,7 @@
 
 enum onlp_thermal_id {
     THERMAL_RESERVED = 0,
+    THERMAL_CPU_CORE,
     THERMAL_1_ON_CARRIER_BOARD,
     THERMAL_2_ON_CARRIER_BOARD,
     THERMAL_1_ON_MAIN_BOARD,
@@ -110,16 +111,6 @@ enum fan_id {
     FAN_1_ON_PSU_3,
     FAN_1_ON_PSU_4
 };
-
-enum fan_board_idx {
-    FAN_BOARD1 = 1,
-    FAN_BOARD2 = 2,
-};
-
-int psu_pmbus_info_get(int id, char *node, int *value);
-int psu_pmbus_str_get(int id, char *data_buf, int data_len, char *data_name);
-int onlp_get_psu_hwmon_idx(int pid);
-int onlp_get_fan_hwmon_idx(int fan_board_idx);
 
 #define AIM_FREE_IF_PTR(p) \
     do \
