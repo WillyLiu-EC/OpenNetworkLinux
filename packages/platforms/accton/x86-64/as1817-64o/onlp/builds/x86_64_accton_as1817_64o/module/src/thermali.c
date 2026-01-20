@@ -52,7 +52,7 @@ static char* devfiles__[] = { /* must map with onlp_thermal_id */
     "/sys/bus/platform/devices/as1817_64o_thermal/temp14_input",
     /* PSU thermal */
     "/sys/bus/platform/devices/as1817_64o_psu/psu1_temp1_input",
-    "/sys/bus/platform/devices/as1817_64o_psu/psu1_temp2input",
+    "/sys/bus/platform/devices/as1817_64o_psu/psu1_temp2_input",
     "/sys/bus/platform/devices/as1817_64o_psu/psu1_temp3_input",
     "/sys/bus/platform/devices/as1817_64o_psu/psu2_temp1_input",
     "/sys/bus/platform/devices/as1817_64o_psu/psu2_temp2_input",
@@ -68,43 +68,43 @@ static char* devfiles__[] = { /* must map with onlp_thermal_id */
 /* Static values */
 static onlp_thermal_info_t tinfo[] = {
     { }, /* Not used */
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_CARRIER_BOARD), "CB_temp(0x48)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_CARRIER_BOARD), "CB_RearCenter_temp(0x48)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_CARRIER_BOARD), "CB_temp(0x49)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_CARRIER_BOARD), "CB_FrontLeft_temp(0x49)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BOARD), "MB_temp(0x48)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_MAIN_BOARD), "MB_FrontRight_temp(0x48)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BOARD), "MB_temp(0x49)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_MAIN_BOARD), "MB_RearRight_temp(0x49)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BOARD), "MB_temp(0x4a)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_3_ON_MAIN_BOARD), "MB_RearCenter_temp(0x4a)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BOARD), "MB_temp(0x4b)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_4_ON_MAIN_BOARD), "MB_RearLeft_temp(0x4b)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BOARD), "MB_temp(0x4c)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_5_ON_MAIN_BOARD), "MB_RearCenter_temp(0x4c)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_SFP28_BOARD), "RJ45_temp(0x4d)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_SFP28_BOARD), "RJ45_FrontLeft_temp(0x4d)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_FCM_BOARD), "FB_Top_temp(0x4d)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_1_ON_FCM_BOARD), "FB_Top_RearCenter_temp(0x4d)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },
-    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_FCM_BOARD), "FB_Bottom_temp(0x4d)", 0, {0} },
+    {   { ONLP_THERMAL_ID_CREATE(THERMAL_2_ON_FCM_BOARD), "FB_Bottom_RearCenter_temp(0x4d)", 0, {0} },
         ONLP_THERMAL_STATUS_PRESENT,
         ONLP_THERMAL_CAPS_ALL, 0, ONLP_THERMAL_THRESHOLD_INIT_DEFAULTS
     },

@@ -30,7 +30,7 @@
 
 #define CHASSIS_FAN_COUNT      16
 #define CHASSIS_THERMAL_COUNT 14
-#define CHASSIS_LED_COUNT      4
+#define CHASSIS_LED_COUNT      5
 #define CHASSIS_PSU_COUNT      4
 #define NUM_OF_THERMAL_PER_PSU 3
 
@@ -41,7 +41,6 @@
 
 #define PSU_SYSFS_PATH "/sys/bus/platform/devices/as1817_64o_psu/"
 #define FAN_SYSFS_PATH "/sys/bus/platform/devices/as1817_64o_fan/"
-#define SYS_LED_PATH   "/sys/devices/platform/as1813_64_led/"
 #define IDPROM_PATH    "/sys/bus/platform/devices/as1817_64o_sys/eeprom"
 
 enum onlp_thermal_id {
@@ -77,9 +76,10 @@ enum onlp_thermal_id {
 
 enum onlp_led_id {
     LED_LOC = 1,
-    LED_STAT,
+    LED_DIAG,
     LED_FAN,
     LED_PSU,
+    LED_ALARM
 };
 
 enum onlp_fan_dir {

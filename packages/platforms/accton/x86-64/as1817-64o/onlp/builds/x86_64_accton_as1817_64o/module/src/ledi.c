@@ -34,16 +34,12 @@
         }                                       \
     } while(0)
 
-#define LED_FORMAT "/sys/class/leds/as1813_64_led::%s/brightness"
-
 enum led_light_mode { /*must be the same with the definition @ kernel driver */
     LED_MODE_OFF,
-    LED_MODE_GREEN 				= 16,
-    LED_MODE_GREEN_BLINKING 	= 17,
-    LED_MODE_BLUE 				= 18,
-    LED_MODE_BLUE_BLINKING 		= 19,
-    LED_MODE_AMBER 				= 24,
-    LED_MODE_UNKNOWN			= 99
+    LED_MODE_RED = 10,
+    LED_MODE_GREEN = 16,
+    LED_MODE_BLUE_BLINKING = 19,
+    LED_MODE_AUTO = 22
 };
 
 typedef struct led_light_mode_map {
@@ -53,26 +49,23 @@ typedef struct led_light_mode_map {
 } led_light_mode_map_t;
 
 led_light_mode_map_t led_map[] = {
-    { LED_LOC,   LED_MODE_OFF,            ONLP_LED_MODE_OFF },
-    { LED_LOC,   LED_MODE_BLUE_BLINKING,  ONLP_LED_MODE_BLUE_BLINKING },
-    { LED_STAT,  LED_MODE_OFF,            ONLP_LED_MODE_OFF },
-    { LED_STAT,  LED_MODE_BLUE,           ONLP_LED_MODE_BLUE },
-    { LED_STAT,  LED_MODE_GREEN,          ONLP_LED_MODE_GREEN },
-    { LED_STAT,  LED_MODE_GREEN_BLINKING, ONLP_LED_MODE_GREEN_BLINKING },
-    { LED_FAN,   LED_MODE_OFF,            ONLP_LED_MODE_OFF },
-    { LED_FAN,   LED_MODE_GREEN,          ONLP_LED_MODE_GREEN },
-    { LED_FAN,   LED_MODE_AMBER,          ONLP_LED_MODE_ORANGE },
-    { LED_PSU,  LED_MODE_OFF,             ONLP_LED_MODE_OFF },
-    { LED_PSU,  LED_MODE_GREEN,           ONLP_LED_MODE_GREEN },
-    { LED_PSU,  LED_MODE_AMBER,           ONLP_LED_MODE_ORANGE },
+    { LED_LOC,    LED_MODE_OFF,            ONLP_LED_MODE_OFF },
+    { LED_LOC,    LED_MODE_BLUE_BLINKING,  ONLP_LED_MODE_BLUE_BLINKING },
+    { LED_DIAG,   LED_MODE_AUTO,           ONLP_LED_MODE_AUTO },
+    { LED_FAN,    LED_MODE_AUTO,           ONLP_LED_MODE_AUTO },
+    { LED_PSU,    LED_MODE_AUTO,           ONLP_LED_MODE_AUTO },
+    { LED_ALARM,  LED_MODE_OFF,            ONLP_LED_MODE_OFF },
+    { LED_ALARM,  LED_MODE_RED,            ONLP_LED_MODE_RED },
+
 };
 
 static char *leds[] = { /* must map with onlp_led_id */
     NULL,
-    "loc",
-    "stat",
-    "fan",
-    "psu"
+    "/sys/bus/platform/devices/as1817_64o_led/led_loc",
+    "/sys/bus/platform/devices/as1817_64o_led/led_diag",
+    "/sys/bus/platform/devices/as1817_64o_led/led_fan",
+    "/sys/bus/platform/devices/as1817_64o_led/led_psu",
+    "/sys/bus/platform/devices/as1817_64o_led/led_alarm"
 };
 
 /*
@@ -87,20 +80,26 @@ static onlp_led_info_t linfo[] =
         ONLP_LED_CAPS_ON_OFF | ONLP_LED_CAPS_BLUE_BLINKING,
     },
     {
-        { ONLP_LED_ID_CREATE(LED_STAT), "Chassis LED 2 (STAT LED)", 0, {0} },
+        { ONLP_LED_ID_CREATE(LED_DIAG), "Chassis LED 2 (DIAG LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
-        ONLP_LED_CAPS_ON_OFF | ONLP_LED_CAPS_BLUE | ONLP_LED_CAPS_GREEN | ONLP_LED_CAPS_GREEN_BLINKING | ONLP_LED_CAPS_ORANGE,
+        ONLP_LED_CAPS_AUTO,
     },
     {
         { ONLP_LED_ID_CREATE(LED_FAN), "Chassis LED 3 (FAN LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
-        ONLP_LED_CAPS_ON_OFF | ONLP_LED_CAPS_GREEN | ONLP_LED_CAPS_ORANGE,
+        ONLP_LED_CAPS_AUTO,
     },
     {
         { ONLP_LED_ID_CREATE(LED_PSU), "Chassis LED 4 (PSU LED)", 0, {0} },
         ONLP_LED_STATUS_PRESENT,
         ONLP_LED_CAPS_AUTO,
+    },
+    {
+        { ONLP_LED_ID_CREATE(LED_ALARM), "Chassis LED 5 (ALARM LED)", 0, {0} },
+        ONLP_LED_STATUS_PRESENT,
+        ONLP_LED_CAPS_ON_OFF | ONLP_LED_CAPS_RED,
     }
+
 };
 
 static int driver_to_onlp_led_mode(enum onlp_led_id id, enum led_light_mode driver_led_mode)
@@ -150,7 +149,7 @@ onlp_ledi_info_get(onlp_oid_t id, onlp_led_info_t* info)
     *info = linfo[ONLP_OID_ID_GET(id)];
 
     /* Get LED mode */
-    if (onlp_file_read_int(&value, LED_FORMAT, leds[lid]) < 0) {
+    if (onlp_file_read_int(&value, leds[lid]) < 0) {
         return ONLP_STATUS_E_INTERNAL;
     }
 
@@ -199,7 +198,7 @@ onlp_ledi_mode_set(onlp_oid_t id, onlp_led_mode_t mode)
 
     lid = ONLP_OID_ID_GET(id);
 
-    if (onlp_file_write_int(onlp_to_driver_led_mode(lid , mode), LED_FORMAT, leds[lid]) != 0) {
+    if (onlp_file_write_int(onlp_to_driver_led_mode(lid , mode), leds[lid]) != 0) {
         return ONLP_STATUS_E_INTERNAL;
     }
 
