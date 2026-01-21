@@ -147,7 +147,7 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     if (ONLP_SUCCESS(ret)) {
         info->hdr.coids[0] = ONLP_FAN_ID_CREATE(pid + CHASSIS_FAN_COUNT);
     }
-    #if 0
+
     val = 0;
     ret = onlp_file_read_int(&val, "%s""psu%d_temp1_input", PSU_SYSFS_PATH, pid);
     if (ONLP_SUCCESS(ret)) {
@@ -165,7 +165,6 @@ onlp_psui_info_get(onlp_oid_t id, onlp_psu_info_t* info)
     if (ONLP_SUCCESS(ret)) {
         info->hdr.coids[3] = ONLP_THERMAL_ID_CREATE(CHASSIS_THERMAL_COUNT + (pid-1)*3 + 3);
     }
-    #endif
     /* Read model */
     char *string = NULL;
     int len = onlp_file_read_str(&string, "%s""psu%d_model", PSU_SYSFS_PATH, pid);

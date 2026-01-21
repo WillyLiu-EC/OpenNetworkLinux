@@ -40,8 +40,8 @@
 
 /* Static fan information */
 /* Top front fan id : 1, 2, 3, 4
-   Top rear fan id : 5, 6, 7, 8
-   Bottom front fan id : 9, 10, 11, 12
+   Bottom front fan id : 5, 6, 7, 8
+   Top rear fan id : 9, 10, 11, 12
    Bottom rear fan id : 13, 14, 15, 16 */
 
 onlp_fan_info_t finfo[] = {
@@ -79,7 +79,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_5_ON_FAN_BOARD), "Chassis Fan - 5 Top Rear Fan 1", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_5_ON_FAN_BOARD), "Chassis Fan - 5 Bottom Front Fan 1", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -87,7 +87,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_6_ON_FAN_BOARD), "Chassis Fan - 6 Top Rear Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_6_ON_FAN_BOARD), "Chassis Fan - 6 Bottom Front Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -95,7 +95,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_7_ON_FAN_BOARD), "Chassis Fan - 7 Top Rear Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_7_ON_FAN_BOARD), "Chassis Fan - 7 Bottom Front Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -103,7 +103,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_8_ON_FAN_BOARD), "Chassis Fan - 8 Top Rear Fan 4", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_8_ON_FAN_BOARD), "Chassis Fan - 8 Bottom Front Fan 4", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -111,7 +111,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_9_ON_FAN_BOARD), "Chassis Fan - 9 Bottom Front Fan 1", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_9_ON_FAN_BOARD), "Chassis Fan - 9 Top Rear Fan 1", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -119,7 +119,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_10_ON_FAN_BOARD), "Chassis Fan - 10 Bottom Front Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_10_ON_FAN_BOARD), "Chassis Fan - 10 Top Rear Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -127,7 +127,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_11_ON_FAN_BOARD), "Chassis Fan - 11 Bottom Front Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_11_ON_FAN_BOARD), "Chassis Fan - 11 Top Rear Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -135,7 +135,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_12_ON_FAN_BOARD), "Chassis Fan - 12 Bottom Front Fan 4", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_12_ON_FAN_BOARD), "Chassis Fan - 12 Top Rear Fan 4", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -191,6 +191,10 @@ static int
 _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
 {
     int value, ret;
+    char file[32];
+    char *str = NULL;
+    int   len = 0;
+
     if (fid < FAN_1_ON_FAN_BOARD || fid > FAN_16_ON_FAN_BOARD) {
         return ONLP_STATUS_E_UNSUPPORTED;
     }
@@ -207,8 +211,17 @@ _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
     info->status |= ONLP_FAN_STATUS_PRESENT;
 
     /* get fan dir */
-    info->status |= ONLP_FAN_STATUS_F2B;
-
+    snprintf(file, sizeof(file), "fan%d_dir", fid);
+    len = onlp_file_read_str(&str, FAN_SYSFS_PATH, file);
+     if (str && len >= 3) {
+         if (strncmp(str, "B2F", strlen("B2F")) == 0) {
+             info->status |= ONLP_FAN_STATUS_B2F;
+         }
+         else {
+             info->status |= ONLP_FAN_STATUS_F2B;
+         }
+     }
+     AIM_FREE_IF_PTR(str);
     /* get fan speed */
     ret = onlp_file_read_int(&value, "%s""fan%d_input", FAN_SYSFS_PATH, fid);
     if (ret < 0) {
@@ -233,13 +246,25 @@ static int
 _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
 {
     int ret = 0, val = 0;
+    char file[32];
+    char *str = NULL;
+    int   len = 0;
 
     info->status |= ONLP_FAN_STATUS_PRESENT;
 
     /* get fan direction
      */
-    info->status |= ONLP_FAN_STATUS_F2B;
-
+    snprintf(file, sizeof(file), "psu%d_fan_dir", pid);
+    len = onlp_file_read_str(&str, PSU_SYSFS_PATH, file);
+    if (str && len >= 3) {
+        if (strncmp(str, "B2F", strlen("B2F")) == 0) {
+            info->status |= ONLP_FAN_STATUS_B2F;
+        }
+        else {
+            info->status |= ONLP_FAN_STATUS_F2B;
+        }
+    }
+    AIM_FREE_IF_PTR(str);
     /* get fan speed
      */
     ret = onlp_file_read_int(&val, "%s""psu%d_fan1_input", PSU_SYSFS_PATH, pid);

@@ -41,9 +41,9 @@ static char* cpld_ver_path[NUM_OF_CPLD_VER] = {
     "/sys/bus/platform/devices/as1817_64o_sys/fpga_version",       /* FPGA */
     "/sys/bus/platform/devices/as1817_64o_sys/sys_cpld_version",   /* SYS CPLD */
     "/sys/bus/platform/devices/as1817_64o_sys/fan_cpld0_version",  /* TOP Fan CPLD */
-    "/sys/bus/platform/devices/as1817_64o_sys/fan_cpld1_version",   /* BOTTON Fan CPLD */
-    "/sys/bus/platform/devices/as1817_64o_sys/port_cpld0_version", /* Port CPLD-0 */
-    "/sys/bus/platform/devices/as1817_64o_sys/port_cpld1_version"  /* Port CPLD-1 */
+    "/sys/bus/platform/devices/as1817_64o_sys/fan_cpld1_version",  /* BOTTOM Fan CPLD */
+    "/sys/bus/platform/devices/as1817_64o_sys/port_cpld0_version", /* Port CPLD 0 */
+    "/sys/bus/platform/devices/as1817_64o_sys/port_cpld1_version"  /* Port CPLD 1 */
 };
 
 const char*
@@ -169,10 +169,8 @@ onlp_sysi_platform_info_get(onlp_platform_info_t* pi)
 void
 onlp_sysi_platform_info_free(onlp_platform_info_t* pi)
 {
-#if 0
     aim_free(pi->cpld_versions);
     aim_free(pi->other_versions);
-    #endif
 }
 
 
@@ -184,38 +182,5 @@ int onlp_sysi_platform_manage_fans(void)
 int
 onlp_sysi_platform_manage_leds(void)
 {
-#if 0
-    int i, ret = ONLP_STATUS_OK;
-    int fan_led = ONLP_LED_MODE_GREEN;
-
-    /* Get each fan status
-     */
-    for (i = 1; i <= CHASSIS_FAN_COUNT; i++)
-    {
-        onlp_fan_info_t fan_info;
-
-        ret = onlp_fani_info_get(ONLP_FAN_ID_CREATE(i), &fan_info);
-        if (ret != ONLP_STATUS_OK) {
-            AIM_LOG_ERROR("Unable to get fan(%d) status\r\n", i);
-            fan_led = ONLP_LED_MODE_ORANGE;
-            break;
-        }
-
-        if (!(fan_info.status & ONLP_FAN_STATUS_PRESENT)) {
-            AIM_LOG_ERROR("Fan(%d) is not present\r\n", i);
-            fan_led = ONLP_LED_MODE_ORANGE;
-            break;
-        }
-
-        if (fan_info.status & ONLP_FAN_STATUS_FAILED) {
-            AIM_LOG_ERROR("Fan(%d) is not working\r\n", i);
-            fan_led = ONLP_LED_MODE_ORANGE;
-            break;
-        }
-    }
-
-        onlp_ledi_mode_set(ONLP_LED_ID_CREATE(LED_FAN), fan_led);
-
-    #endif
     return ONLP_STATUS_OK; 
 }
