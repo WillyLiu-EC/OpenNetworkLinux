@@ -191,7 +191,6 @@ static int
 _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
 {
     int value, ret;
-    char file[32];
     char *str = NULL;
     int   len = 0;
 
@@ -209,11 +208,23 @@ _onlp_fani_info_get_fan(int fid, onlp_fan_info_t* info)
         return ONLP_STATUS_OK;
     }
     info->status |= ONLP_FAN_STATUS_PRESENT;
-
+    /* get fan model name */
+    len = onlp_file_read_str(&str, "%s""fan%d_model", FAN_SYSFS_PATH, fid);
+    if (str && len) {
+         memcpy(info->model, str, len);
+         info->model[len] = '\0';
+     }
+    AIM_FREE_IF_PTR(str);
+    /* get fan serial */
+    len = onlp_file_read_str(&str, "%s""fan%d_serial", FAN_SYSFS_PATH, fid);
+    if (str && len) {
+         memcpy(info->serial, str, len);
+         info->serial[len] = '\0';
+     }
+    AIM_FREE_IF_PTR(str);
     /* get fan dir */
-    snprintf(file, sizeof(file), "fan%d_dir", fid);
-    len = onlp_file_read_str(&str, FAN_SYSFS_PATH, file);
-     if (str && len >= 3) {
+    len = onlp_file_read_str(&str, "%s""fan%d_dir", FAN_SYSFS_PATH, fid);
+    if (str && len >= 3) {
          if (strncmp(str, "B2F", strlen("B2F")) == 0) {
              info->status |= ONLP_FAN_STATUS_B2F;
          }
@@ -246,7 +257,6 @@ static int
 _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
 {
     int ret = 0, val = 0;
-    char file[32];
     char *str = NULL;
     int   len = 0;
 
@@ -254,8 +264,7 @@ _onlp_fani_info_get_fan_on_psu(int pid, onlp_fan_info_t* info)
 
     /* get fan direction
      */
-    snprintf(file, sizeof(file), "psu%d_fan_dir", pid);
-    len = onlp_file_read_str(&str, PSU_SYSFS_PATH, file);
+    len = onlp_file_read_str(&str, "%s""psu%d_fan_dir",PSU_SYSFS_PATH, pid);
     if (str && len >= 3) {
         if (strncmp(str, "B2F", strlen("B2F")) == 0) {
             info->status |= ONLP_FAN_STATUS_B2F;
