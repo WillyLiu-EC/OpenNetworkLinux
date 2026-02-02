@@ -78,9 +78,9 @@ enum onlp_thermal_id {
 enum onlp_led_id {
     LED_LOC = 1,
     LED_DIAG,
+    LED_ALARM,
     LED_FAN,
-    LED_PSU,
-    LED_ALARM
+    LED_PSU
 };
 
 enum onlp_fan_dir {

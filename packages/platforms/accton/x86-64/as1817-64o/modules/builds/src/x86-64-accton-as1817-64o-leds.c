@@ -189,13 +189,6 @@ static ssize_t show_led(struct device *dev, struct device_attribute *da,
 	int value = 0;
 	int error = 0;
 
-    /*
-    * PSU, FAN, and DIAG LEDs are controlled by BMC automatically.
-    * Software cannot read their actual state, so report AUTO mode.
-    */
-	if (attr->index == LED_PSU || attr->index == LED_FAN || attr->index == LED_DIAG)
-		return sprintf(buf, "%d\n", LED_MODE_AUTO);
-
 	mutex_lock(&data->update_lock);
 
 	data = as1817_64o_led_update_device();

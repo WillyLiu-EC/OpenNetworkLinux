@@ -55,7 +55,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_2_ON_FAN_BOARD), "Chassis Fan - 2 Top Front Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_2_ON_FAN_BOARD), "Chassis Fan - 2 Bottom Front Fan 1", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -63,7 +63,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_3_ON_FAN_BOARD), "Chassis Fan - 3 Top Front Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_3_ON_FAN_BOARD), "Chassis Fan - 3 Top Front Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -71,7 +71,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_4_ON_FAN_BOARD), "Chassis Fan - 4 Top Front Fan 4", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_4_ON_FAN_BOARD), "Chassis Fan - 4 Bottom Front Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -79,7 +79,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_5_ON_FAN_BOARD), "Chassis Fan - 5 Bottom Front Fan 1", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_5_ON_FAN_BOARD), "Chassis Fan - 5 Top Front Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -87,7 +87,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_6_ON_FAN_BOARD), "Chassis Fan - 6 Bottom Front Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_6_ON_FAN_BOARD), "Chassis Fan - 6 Bottom Front Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -95,7 +95,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_7_ON_FAN_BOARD), "Chassis Fan - 7 Bottom Front Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_7_ON_FAN_BOARD), "Chassis Fan - 7 Top Front Fan 4", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -119,7 +119,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_10_ON_FAN_BOARD), "Chassis Fan - 10 Top Rear Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_10_ON_FAN_BOARD), "Chassis Fan - 10 Bottom Rear Fan 1", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -127,7 +127,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_11_ON_FAN_BOARD), "Chassis Fan - 11 Top Rear Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_11_ON_FAN_BOARD), "Chassis Fan - 11 Top Rear Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -135,7 +135,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_12_ON_FAN_BOARD), "Chassis Fan - 12 Top Rear Fan 4", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_12_ON_FAN_BOARD), "Chassis Fan - 12 Bottom Rear Fan 2", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -143,7 +143,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_13_ON_FAN_BOARD), "Chassis Fan - 13 Bottom Rear Fan 1", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_13_ON_FAN_BOARD), "Chassis Fan - 13 Top Rear Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -151,7 +151,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_14_ON_FAN_BOARD), "Chassis Fan - 14 Bottom Rear Fan 2", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_14_ON_FAN_BOARD), "Chassis Fan - 14 Bottom Rear Fan 3", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
@@ -159,7 +159,7 @@ onlp_fan_info_t finfo[] = {
         ONLP_FAN_MODE_INVALID,
     },
     {
-        { ONLP_FAN_ID_CREATE(FAN_15_ON_FAN_BOARD), "Chassis Fan - 15 Bottom Rear Fan 3", 0, {0} },
+        { ONLP_FAN_ID_CREATE(FAN_15_ON_FAN_BOARD), "Chassis Fan - 15 Top Rear Fan 4", 0, {0} },
         0x0,
         ONLP_FAN_CAPS_SET_PERCENTAGE | ONLP_FAN_CAPS_GET_RPM | ONLP_FAN_CAPS_GET_PERCENTAGE,
         0,
