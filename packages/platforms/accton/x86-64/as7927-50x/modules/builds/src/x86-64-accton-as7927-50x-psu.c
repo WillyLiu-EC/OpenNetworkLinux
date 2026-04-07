@@ -198,6 +198,7 @@ static struct platform_driver as7927_50x_psu_driver = {
 #define PSU_FAN_INPUT_ATTR_ID(index) PSU##index##_FAN_INPUT
 #define PSU_FAN_DIR_ATTR_ID(index) PSU##index##_FAN_DIR
 
+#define PSU_TYPE_ATTR_ID(index) PSU##index##_TYPE
 #define PSU_FAN_SPEED_MAX_ATTR_ID(index) PSU##index##_FAN_SPEED_MAX
 #define PSU_TEMP1_INPUT_MAX_ATTR_ID(index) PSU##index##_TEMP1_INPUT_MAX
 #define PSU_TEMP1_INPUT_MIN_ATTR_ID(index) PSU##index##_TEMP1_INPUT_MIN
@@ -234,6 +235,7 @@ static struct platform_driver as7927_50x_psu_driver = {
     PSU_TEMP3_INPUT_ATTR_ID(psu_id), \
     PSU_FAN_INPUT_ATTR_ID(psu_id), \
     PSU_FAN_DIR_ATTR_ID(psu_id), \
+    PSU_TYPE_ATTR_ID(psu_id), \
     PSU_FAN_SPEED_MAX_ATTR_ID(psu_id), \
     PSU_TEMP1_INPUT_MAX_ATTR_ID(psu_id), \
     PSU_TEMP1_INPUT_MIN_ATTR_ID(psu_id), \
@@ -296,6 +298,8 @@ enum as7927_50x_psu_sysfs_attrs {
                                 PSU##index##_FAN_INPUT); \
     static SENSOR_DEVICE_ATTR(psu##index##_fan_dir, S_IRUGO, show_string, NULL,\
                                 PSU##index##_FAN_DIR); \
+    static SENSOR_DEVICE_ATTR(psu##index##_type, S_IRUGO, \
+                        show_psu_info, NULL, PSU##index##_TYPE); \
     static SENSOR_DEVICE_ATTR(psu##index##_fan_speed_max, S_IRUGO, \
                         show_psu_info, NULL, PSU##index##_FAN_SPEED_MAX); \
     static SENSOR_DEVICE_ATTR(psu##index##_temp1_input_max, S_IRUGO, \
@@ -349,6 +353,7 @@ enum as7927_50x_psu_sysfs_attrs {
     &sensor_dev_attr_psu##index##_temp3_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_fan1_input.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_fan_dir.dev_attr.attr, \
+    &sensor_dev_attr_psu##index##_type.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_fan_speed_max.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp1_input_max.dev_attr.attr, \
     &sensor_dev_attr_psu##index##_temp1_input_min.dev_attr.attr, \
@@ -681,6 +686,11 @@ static ssize_t show_psu_info(struct device *dev, struct device_attribute *da,
     present = !!(data->ipmi_resp[pid].status[PSU_PRESENT]);
 
     switch (attr->index) {
+    case PSU1_TYPE:
+    case PSU2_TYPE:
+        VALIDATE_PRESENT_RETURN(pid);
+        value = (u32)data->ipmi_resp[pid].info[PSU_TYPE];
+        break;
     case PSU1_FAN_SPEED_MAX:
     case PSU2_FAN_SPEED_MAX:
         VALIDATE_PRESENT_RETURN(pid);
