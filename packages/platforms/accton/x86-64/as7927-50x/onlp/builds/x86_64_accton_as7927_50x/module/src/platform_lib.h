@@ -104,10 +104,32 @@ typedef enum as7927_50x_platform_id {
     PID_UNKNOWN
 } as7927_50x_platform_id_t;
 
+#define PORT_NUM                50
+#define LAST_OF_SFP_PORT        48
+
+typedef struct port_thermal_data {
+    int present;
+    int temp;
+    int high_alarm;
+} port_thermal_data_t;
+
+typedef struct temp_reader_data {
+    port_thermal_data_t ports[PORT_NUM + 1];
+} temp_reader_data_t;
+
 enum onlp_fan_dir onlp_get_fan_dir(int fid);
 enum onlp_psu_type onlp_get_psu_type(int pid);
 int onlp_get_psu_hwmon_idx(int pid);
 int onlp_get_fan_hwmon_idx(void);
+
+int get_xcvr_presence(void);
+int get_sff8472_temp(int port, int *temp);
+int get_sff8472_temp_alarm(int port, int *alarm);
+int get_sff8436_temp(int port, int *temp);
+int get_sff8436_temp_alarm(int port, int *alarm);
+int get_cmis_temp(int port, int *temp);
+int get_cmis_temp_alarm(int port, int *alarm);
+int get_xcvr_temp(temp_reader_data_t *temp);
 
 #define AIM_FREE_IF_PTR(p) \
     do \
