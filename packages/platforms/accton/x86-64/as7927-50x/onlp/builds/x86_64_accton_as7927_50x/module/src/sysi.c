@@ -32,13 +32,65 @@
 #include <onlp/platformi/thermali.h>
 #include <onlp/platformi/fani.h>
 #include <onlp/platformi/psui.h>
+#include <onlp/platformi/sfpi.h>
 #include "platform_lib.h"
 
 #include "x86_64_accton_as7927_50x_int.h"
 #include "x86_64_accton_as7927_50x_log.h"
 
+#define NUM_OF_CPLD_VER          7
+#define PORT_NUM                50
+#define LAST_OF_SFP_PORT        48
+#define BMC_FILE_RETRY_COUNT     3    // Retry count for file read/write operations
+#define BMC_FILE_RETRY_DELAY_S   1    // Delay between retries (in seconds, 1s)
 
-#define NUM_OF_CPLD_VER                   7
+#define MODULE_EFUSE_FORMAT        "/sys/bus/platform/devices/as7927_50x_fpga/module_efuse_%d"
+
+typedef struct port_thermal_data {
+    int present;
+    int temp;
+    int high_alarm;
+} port_thermal_data_t;
+
+typedef struct temp_reader_data {
+    port_thermal_data_t ports[PORT_NUM + 1];
+} temp_reader_data_t;
+
+int onlp_sysi_get_xcvr_temp(temp_reader_data_t *temp);
+int onlp_sysi_xcvr_over_temp_protector(int port);
+
+enum temp_sensors {
+    TEMP_SENSOR_XCVR,
+    TEMP_SENSOR_COUNT
+};
+
+typedef int (*temp_getter_t)(temp_reader_data_t *temp);
+typedef int (*ot_protector_t)(int port);
+
+typedef struct temp_handler {
+    temp_getter_t    temp_readers[TEMP_SENSOR_COUNT];
+} temp_handler_t;
+
+/* over temp protection */
+typedef struct otp_handler {
+    ot_protector_t  otp_writer;
+} otp_handler_t;
+
+struct thermal_policy_manager {
+    temp_handler_t  temp_hdlr;
+    otp_handler_t   otp_hdlr; /* over temp protector */
+};
+
+struct thermal_policy_manager tp_mgr = {
+    .temp_hdlr = {
+        .temp_readers = {
+            [TEMP_SENSOR_XCVR] = onlp_sysi_get_xcvr_temp
+        }
+    },
+    .otp_hdlr = {
+        .otp_writer = onlp_sysi_xcvr_over_temp_protector
+    }
+};
 
 static char* cpld_ver_path[NUM_OF_CPLD_VER] = {
     "/sys/bus/platform/devices/as7927_50x_sys/come_e_cpld_ver", /* CPU CPLD */
@@ -154,14 +206,12 @@ onlp_sysi_platform_info_get(onlp_platform_info_t* pi)
                                     "\r\n\t   Carrier(0x60):%s"
                                     "\r\n\t   Fan(0x33):%s"
                                     , v[0], v[1], v[2], v[3], v[4], v[5]);
-                                    
-                                    
-                                    
-pi->other_versions = aim_fstrdup("\r\n\t   FPGA(0x60):%s"
-                                 "\r\n\t   BIOS: %s"
-                                 "\r\n\t   ONIE: %s"
-                                 "\r\n\t   BMC: %s",
-                                 v[6], bios_ver, onie.onie_version, bmc_ver);
+
+    pi->other_versions = aim_fstrdup("\r\n\t   FPGA(0x60):%s"
+                                     "\r\n\t   BIOS: %s"
+                                     "\r\n\t   ONIE: %s"
+                                     "\r\n\t   BMC: %s",
+                                     v[6], bios_ver, onie.onie_version, bmc_ver);
 
     for (i = 0; i < AIM_ARRAYSIZE(v); i++) {
         AIM_FREE_IF_PTR(v[i]);
@@ -175,6 +225,15 @@ pi->other_versions = aim_fstrdup("\r\n\t   FPGA(0x60):%s"
     return ret;
 }
 
+int 
+onlp_sysi_get_xcvr_presence(void)
+{
+    onlp_sfp_bitmap_t bitmap;
+    onlp_sfp_bitmap_t_init(&bitmap);
+    onlp_sfp_presence_bitmap_get(&bitmap);
+    return !(AIM_BITMAP_COUNT(&bitmap) == 0);
+}
+
 void
 onlp_sysi_platform_info_free(onlp_platform_info_t* pi)
 {
@@ -182,9 +241,465 @@ onlp_sysi_platform_info_free(onlp_platform_info_t* pi)
     aim_free(pi->other_versions);
 }
 
+// =======================================================
+// SFF-8472 (SFP) Temperature and Alarm Getters
+// =======================================================
+int 
+onlp_sysi_get_sff8472_temp(int port, int *temp)
+{
+    int value;
+    int16_t port_temp;
+
+    /* SFF-8472 DDM Support Check is at Address A0h (0x50), Offset 92 */
+    value = onlp_sfpi_dev_readb(port, 0x50, 92);
+    if (value < 0 || !(value & 0x40)) { 
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+
+    /* SFF-8472 Temperature is at Address A2h (0x51), Offset 96-97 */
+    value = onlp_sfpi_dev_readb(port, 0x51, 96);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x51, 97);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (port_temp | (int16_t)(value & 0xFF));
+
+    *temp = (int)port_temp * 1000 / 256;
+    return ONLP_STATUS_OK;
+}
+
+int 
+onlp_sysi_get_sff8472_temp_alarm(int port, int *alarm)
+{
+    int value;
+    int16_t port_alarm;
+
+    /* SFF-8472 High Alarm is at Address A2h (0x51), Offset 00-01 */
+    value = onlp_sfpi_dev_readb(port, 0x51, 0); 
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x51, 1);
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (port_alarm | (int16_t)(value & 0xFF));
+
+    *alarm = (int)port_alarm * 1000 / 256;
+    return ONLP_STATUS_OK;
+}
+
+// =======================================================
+// SFF-8436 (QSFP+) Temperature and Alarm Getters
+// =======================================================
+int 
+onlp_sysi_get_sff8436_temp(int port, int *temp)
+{
+    int value;
+    int16_t port_temp;
+
+    /* QSFP+ Temperature is at Address A0h (0x50), Page 00h, Offset 22-23 */
+    value = onlp_sfpi_dev_readb(port, 0x50, 22);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 23);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (port_temp | (int16_t)(value & 0xFF));
+
+    *temp = (int)port_temp * 1000 / 256;
+    return ONLP_STATUS_OK;
+}
+
+int 
+onlp_sysi_get_sff8436_temp_alarm(int port, int *alarm)
+{
+    int value;
+    int16_t port_alarm;
+
+    /* QSFP+ Memory model check is at Address A0h (0x50), Offset 2 */
+    value = onlp_sfpi_dev_readb(port, 0x50, 0x2);
+    if (value < 0 || (value & 0x04)) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+
+    /* QSFP+ Temp High Alarm is at Page 03h，Offset 128-129 */
+    if (onlp_sfpi_dev_writeb(port, 0x50, 127, 0x03) < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 128);
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 129);
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (port_alarm | (int16_t)(value & 0xFF));
+    *alarm = (int)port_alarm * 1000 / 256;
+
+    onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+    return ONLP_STATUS_OK;
+}
+
+// =======================================================
+// CMIS (QSFP-DD) Temperature and Alarm Getters
+// =======================================================
+int onlp_sysi_get_cmis_temp(int port, int *temp)
+{
+    int value;
+    int16_t port_temp;
+
+
+    /* CMIS Temperature is at Address A0h (0x50), Page 00h, Offset 14-15 */
+    value = onlp_sfpi_dev_readb(port, 0x50, 14);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 15);
+    if (value < 0) {
+        *temp = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_temp = (port_temp | (int16_t)(value & 0xFF));
+
+    *temp = (int)port_temp * 1000 / 256;
+    return ONLP_STATUS_OK;
+}
+
+int onlp_sysi_get_cmis_temp_alarm(int port, int *alarm)
+{
+    int value;
+    int16_t port_alarm;
+
+    /* CMIS Memory model check is at Address A0h (0x50), Offset 2 */
+    value = onlp_sfpi_dev_readb(port, 0x50, 0x2);
+    if (value < 0 || (value & 0x80)) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+
+    /* CMIS Temp High Alarm is at Page 02h，Offset 128-129 */
+    if (onlp_sfpi_dev_writeb(port, 0x50, 127, 0x02) < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        return ONLP_STATUS_E_MISSING;
+    }
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 128);
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (int16_t)((value & 0xFF) << 8);
+
+    value = onlp_sfpi_dev_readb(port, 0x50, 129);
+    if (value < 0) {
+        *alarm = ONLP_STATUS_E_MISSING;
+        onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+        return ONLP_STATUS_E_MISSING;
+    }
+    port_alarm = (port_alarm | (int16_t)(value & 0xFF));
+    *alarm = (int)port_alarm * 1000 / 256;
+
+    onlp_sfpi_dev_writeb(port, 0x50, 127, 0x00);
+    return ONLP_STATUS_OK;
+}
+
+int 
+onlp_sysi_get_xcvr_temp(temp_reader_data_t *temp)
+{
+    int ret = ONLP_STATUS_OK;
+    int value, port;
+    int port_temp = ONLP_STATUS_E_MISSING, port_alarm = ONLP_STATUS_E_MISSING;
+
+    memset(temp, 0, sizeof(temp_reader_data_t));
+
+    if (!onlp_sysi_get_xcvr_presence()) {
+        return ONLP_STATUS_OK;
+    }
+
+    for (port = 1; port <= PORT_NUM; port++) {
+        temp->ports[port].temp = ONLP_STATUS_E_MISSING;
+        temp->ports[port].high_alarm = ONLP_STATUS_E_MISSING;
+        temp->ports[port].present = 0;
+
+        port_temp = ONLP_STATUS_E_MISSING;
+        port_alarm = ONLP_STATUS_E_MISSING;
+
+        if (onlp_sfpi_is_present(port) != 1) {
+            continue;
+        }
+
+        temp->ports[port].present = 1;
+
+        value = onlp_sfpi_dev_readb(port, 0x50, 0);
+        if (value < 0) {
+            AIM_LOG_ERROR("Unable to get read port(%d) eeprom\r\n", port);
+            continue;
+        }
+
+        if (value == 0x18 || value == 0x19 || value == 0x1E) {
+            ret = onlp_sysi_get_cmis_temp(port, &port_temp);
+            if (ret != ONLP_STATUS_OK) {
+                continue;
+            }
+            onlp_sysi_get_cmis_temp_alarm(port, &port_alarm);
+        }
+        else if (value == 0x0C || value == 0x0D || value == 0x11 || value ==  0xE1) {
+            ret = onlp_sysi_get_sff8436_temp(port, &port_temp);
+            if (ret != ONLP_STATUS_OK) {
+                continue;
+            }
+            onlp_sysi_get_sff8436_temp_alarm(port, &port_alarm);
+        }
+        else if(value == 0x03 || value == 0x0b) {
+            ret = onlp_sysi_get_sff8472_temp(port, &port_temp);
+            if (ret != ONLP_STATUS_OK) {
+                continue;
+            }
+            onlp_sysi_get_sff8472_temp_alarm(port, &port_alarm);
+        }
+        else {
+            continue;
+        }
+
+        temp->ports[port].temp = port_temp;
+        temp->ports[port].high_alarm = (port_alarm != ONLP_STATUS_E_MISSING) ? port_alarm : 75000;
+    }
+
+    return ONLP_STATUS_OK;
+}
+
+int 
+onlp_sysi_xcvr_over_temp_protector(int port)
+{
+    int ret = ONLP_STATUS_E_INTERNAL;
+    AIM_SYSLOG_CRIT("Temperature critical", "OTP Action",
+                    "Critical temperature detected on port %d; performing OTP protect action!", port);
+
+    // SFP
+    if (port > 0 && port <= LAST_OF_SFP_PORT){
+        ret = onlp_file_write_int(0, MODULE_EFUSE_FORMAT, port);
+        if (ret != ONLP_STATUS_OK){
+            AIM_LOG_ERROR("Unable to write e-fuse status from port(%d)\r\n", port);
+        }
+    }
+    // QSFP
+    else if (port > LAST_OF_SFP_PORT && port <= PORT_NUM){
+        ret = onlp_sfpi_control_set(port, ONLP_SFP_CONTROL_RESET_STATE, 1);
+        if (ret != ONLP_STATUS_OK){
+            AIM_LOG_ERROR("Unable to write reset status to port(%d)\r\n", port);
+        }
+    }
+
+    return ret;
+}
+
+/*
+ * Send thermal data (MAC temp, XCVR temp, port number) to BMC.
+ *
+ * This writes to the BMC thermal policy interface, equivalent to:
+ *     ipmitool raw 0x34 0x13 <mac_temp> <xcvr_temp> <xcvr_num>
+ *
+ * Temperatures are in millidegree Celsius and converted to degrees Celsius before sending.
+ *
+ * @param mac_temp   MAC sensor temperature in milli-degrees Celsius
+ * @param xcvr_temp  Transceiver temperature in milli-degrees Celsius
+ * @param xcvr_num   Transceiver port number
+ *
+ * @return ONLP_STATUS_OK         on success
+ *         ONLP_STATUS_E_INTERNAL if formatting fails
+ *         ONLP_STATUS_E_MISSING  if writing to BMC fails
+ */
+int 
+send_thermal_data_to_bmc(int mac_temp, int xcvr_temp, int xcvr_num)
+{
+    char data[64];
+    int ret = ONLP_STATUS_E_INTERNAL;
+
+    if (xcvr_temp == 0) {
+        xcvr_num = 0;
+    }
+
+    ret = snprintf(data, sizeof(data), "%d %d %d",
+                   (mac_temp / 1000), (xcvr_temp / 1000), xcvr_num);
+    if (ret < 0 || ret >= (int)sizeof(data)) {
+        AIM_LOG_WARN("snprintf failed or truncated: mac=%d xcvr=%d port=%d (ret=%d)\n",
+                     mac_temp, xcvr_temp, xcvr_num, ret);
+        return ONLP_STATUS_E_INTERNAL;
+    }
+
+    for (int i = 0; i < BMC_FILE_RETRY_COUNT; i++) {
+        ret = onlp_file_write_str(data, BMC_THERMAL_DATA_PATH);
+        if (ret == ONLP_STATUS_OK) {
+            return ONLP_STATUS_OK;
+        }
+        sleep(BMC_FILE_RETRY_DELAY_S);
+    }
+
+    AIM_LOG_ERROR("Failed to write '%s' to %s", data , BMC_THERMAL_DATA_PATH);
+    return ONLP_STATUS_E_MISSING;
+}
+
+/*
+ * Control BMC thermal policy by collecting and sending temperature data.
+ *
+ *This function performs the following:
+ * . Reads transceiver temperatures via registered readers.
+ * . The MAC temperature will Sends 0 because it is not being used.
+ * . Sends the collected data to the BMC for thermal management.
+ *
+ * @return ONLP_STATUS_OK on success,
+ *         ONLP_STATUS_E_MISSING if:
+ *             - sending thermal data fails.
+ */
+int 
+control_thermal_policy_via_bmc(void)
+{
+    int i, p;
+    int max_temp = ONLP_STATUS_E_MISSING;
+    int max_port = ONLP_STATUS_E_MISSING;
+    temp_reader_data_t temp[TEMP_SENSOR_COUNT] = {0};
+    static bool port_otp_triggered[PORT_NUM + 1] = {false};
+
+    for (i = 0; i < AIM_ARRAYSIZE(temp); i++) {
+        tp_mgr.temp_hdlr.temp_readers[i](&temp[i]);
+    }
+
+    for (p = 1; p <= PORT_NUM; p++) {
+        int present = temp[TEMP_SENSOR_XCVR].ports[p].present;
+        int current_temp = temp[TEMP_SENSOR_XCVR].ports[p].temp;
+        int high_alarm   = temp[TEMP_SENSOR_XCVR].ports[p].high_alarm;
+
+        if (!present || current_temp == ONLP_STATUS_E_MISSING) {
+            port_otp_triggered[p] = false;
+            continue;
+        }
+
+        if (max_temp == ONLP_STATUS_E_MISSING || current_temp > max_temp) {
+            max_temp = current_temp;
+            max_port = p;
+        }
+
+        if (high_alarm != ONLP_STATUS_E_MISSING) {
+            if (current_temp >= high_alarm) {
+                if (!port_otp_triggered[p]) {
+                    AIM_LOG_WARN("Port %d temperature (%d mC) exceeded high alarm (%d mC)! Triggering OTP.\n", 
+                                    p, current_temp, high_alarm);
+                    tp_mgr.otp_hdlr.otp_writer(p);
+                    port_otp_triggered[p] = true;
+                }
+            }
+            else {
+                port_otp_triggered[p] = false;
+            }
+        } 
+        else {
+            port_otp_triggered[p] = false;
+        }
+    }
+
+    if (max_temp == ONLP_STATUS_E_MISSING) {
+        max_temp = 0;
+        max_port = 0;
+    }
+    int mac_temp = 0; // MAC temperature not required
+
+    return send_thermal_data_to_bmc(mac_temp, max_temp, max_port);
+}
+
+static pthread_mutex_t thermal_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t thermal_cond = PTHREAD_COND_INITIALIZER;
+static bool thermal_thread_started = false;
+static bool thermal_thread_waiting = false;
+static pthread_t thermal_thread;
+
+/*
+ * Thermal policy thread loop.
+ *
+ * This background thread waits for a condition signal and runs the thermal policy.
+ * It uses a condition variable to sleep until triggered, and only one instance runs at a time.
+ *
+ * Note: Signals are ignored if the thread is busy. No event queueing.
+ */
+void 
+*thermal_policy_thread_loop(void *arg)
+{
+    while (1) {
+        pthread_mutex_lock(&thermal_lock);
+        thermal_thread_waiting = true;
+        pthread_cond_wait(&thermal_cond, &thermal_lock);
+        thermal_thread_waiting = false;
+        pthread_mutex_unlock(&thermal_lock);
+
+        control_thermal_policy_via_bmc();
+    }
+
+    return NULL;
+}
+
+void 
+start_thermal_policy_thread_once(void)
+{
+    pthread_mutex_lock(&thermal_lock);
+    if (!thermal_thread_started) {
+        thermal_thread_started = true;
+        if (pthread_create(&thermal_thread, NULL, thermal_policy_thread_loop, NULL) != 0) {
+            AIM_LOG_ERROR("Failed to start thermal policy thread.");
+            thermal_thread_started = false;
+        } else {
+            pthread_detach(thermal_thread);
+            thermal_thread_waiting = true;
+            AIM_LOG_INFO("Thermal policy thread started.");
+        }
+    }
+    pthread_mutex_unlock(&thermal_lock);
+}
+
 int
 onlp_sysi_platform_manage_fans(void)
 {
+    start_thermal_policy_thread_once();
+
+    pthread_mutex_lock(&thermal_lock);
+    if (thermal_thread_waiting) {
+        pthread_cond_signal(&thermal_cond);
+    } else {
+        AIM_LOG_INFO("Thermal policy thread is busy; skipping this trigger.");
+    }
+    pthread_mutex_unlock(&thermal_lock);
+
     return ONLP_STATUS_OK;
 }
 
@@ -193,4 +708,3 @@ onlp_sysi_platform_manage_leds(void)
 {
     return ONLP_STATUS_E_UNSUPPORTED;
 }
-

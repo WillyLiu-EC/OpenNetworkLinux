@@ -45,10 +45,13 @@
 #define IPMI_CPLD_DCSCM_CMD            0x06 // Since addr conflicts with FPGA, replaced by 0x06
 #define IPMI_CPLD_FPGA_CMD             0x60
 #define IPMI_CPLD_SYS_CMD              0x61
+#define IPMI_SEND_THERMAL_DATA_CMD     0x13
 
 static int as7927_50x_sys_probe(struct platform_device *pdev);
 static int as7927_50x_sys_remove(struct platform_device *pdev);
 static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_bmc_thermal_data(struct device *dev, struct device_attribute *da,
+    const char *buf, size_t count);
 
 struct as7927_50x_sys_data {
     struct platform_device *pdev;
@@ -58,7 +61,7 @@ struct as7927_50x_sys_data {
     struct ipmi_data ipmi;
     unsigned char    ipmi_resp_eeprom[EEPROM_SIZE];
     unsigned char    ipmi_resp_cpld[4];
-    unsigned char    ipmi_tx_data[2];
+    unsigned char    ipmi_tx_data[3];
     struct bin_attribute eeprom;      /* eeprom data */
 };
 
@@ -78,7 +81,8 @@ enum as5916_54xks_sys_sysfs_attrs {
     FPGA_CPLD,
     FAN_CPLD,
     DCSCM_CPLD,
-    SYS_CPLD
+    SYS_CPLD,
+    THERMAL_DATA
 };
 /* Functions to talk to the IPMI layer */
 static SENSOR_DEVICE_ATTR(come_e_cpld_ver, S_IRUGO, show_cpld_version, NULL, COM_E_CPLD);
@@ -86,6 +90,7 @@ static SENSOR_DEVICE_ATTR(fpga_cpld_ver, S_IRUGO, show_cpld_version, NULL, FPGA_
 static SENSOR_DEVICE_ATTR(fan_cpld_ver, S_IRUGO, show_cpld_version, NULL, FAN_CPLD);
 static SENSOR_DEVICE_ATTR(dcscm_cpld_ver, S_IRUGO, show_cpld_version, NULL, DCSCM_CPLD);
 static SENSOR_DEVICE_ATTR(sys_cpld_ver, S_IRUGO, show_cpld_version, NULL, SYS_CPLD);
+static SENSOR_DEVICE_ATTR(bmc_thermal_data, S_IWUSR, NULL, set_bmc_thermal_data, THERMAL_DATA);
 
 static struct attribute *as7927_50x_sys_attributes[] = {
     &sensor_dev_attr_come_e_cpld_ver.dev_attr.attr,
@@ -93,6 +98,7 @@ static struct attribute *as7927_50x_sys_attributes[] = {
     &sensor_dev_attr_fan_cpld_ver.dev_attr.attr,
     &sensor_dev_attr_dcscm_cpld_ver.dev_attr.attr,
     &sensor_dev_attr_sys_cpld_ver.dev_attr.attr,
+    &sensor_dev_attr_bmc_thermal_data.dev_attr.attr,
     NULL
 };
 
@@ -113,7 +119,7 @@ static ssize_t sys_eeprom_read(loff_t off, char *buf, size_t count)
     data->ipmi_tx_data[0] = (off & 0xff);
     data->ipmi_tx_data[1] = length;
     status = ipmi_send_message(&data->ipmi, IPMI_SYSEEPROM_READ_CMD,
-                                data->ipmi_tx_data, sizeof(data->ipmi_tx_data),
+                                data->ipmi_tx_data, 2,
                                 data->ipmi_resp_eeprom + off, length);
     if (unlikely(status != 0)) {
         goto exit;
@@ -265,6 +271,58 @@ static ssize_t show_cpld_version(struct device *dev, struct device_attribute *da
 exit:
     mutex_unlock(&data->update_lock);
     return error;    
+}
+
+static ssize_t set_bmc_thermal_data(struct device *dev, struct device_attribute *da,
+    const char *buf, size_t count)
+{
+    int status;
+    int args;
+    char *opt, tmp[32] = {0};
+    char *tmp_p;
+    size_t copy_size;
+    u8 input[3] = {0};
+
+    copy_size = (count < sizeof(tmp)) ? count : sizeof(tmp) - 1;
+    #ifdef __STDC_LIB_EXT1__
+    memcpy_s(tmp, copy_size, buf, copy_size);
+    #else
+    memcpy(tmp, buf, copy_size);
+    #endif
+    tmp[copy_size] = '\0';
+
+    args = 0;
+    tmp_p = strim(tmp);
+    while (args < 3 && (opt = strsep(&tmp_p, " ")) != NULL) {
+        if (kstrtou8(opt, 10, &input[args]) == 0) {
+            args++;
+        }
+    }
+    if (args != 3) {
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    data->ipmi_tx_data[0] = input[0];
+    data->ipmi_tx_data[1] = input[1];
+    data->ipmi_tx_data[2] = input[2];
+    status = ipmi_send_message(&data->ipmi, IPMI_SEND_THERMAL_DATA_CMD,
+                            data->ipmi_tx_data, 3,
+                            NULL, 0);
+    if (unlikely(status != 0))
+        goto exit;
+
+    if (unlikely(data->ipmi.rx_result != 0)) {
+        status = -EINVAL;
+        goto exit;
+    }
+
+    status = count;
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return status;
 }
 
 static int as7927_50x_sys_probe(struct platform_device *pdev)

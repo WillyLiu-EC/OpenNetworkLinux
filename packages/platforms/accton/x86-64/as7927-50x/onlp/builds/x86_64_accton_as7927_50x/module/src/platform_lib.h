@@ -26,6 +26,8 @@
 #ifndef __PLATFORM_LIB_H__
 #define __PLATFORM_LIB_H__
 
+#include <unistd.h>
+#include <pthread.h>
 #include "x86_64_accton_as7927_50x_log.h"
 
 #define CHASSIS_FAN_COUNT      14
@@ -46,6 +48,7 @@
 #define BIOS_VER_PATH  "/sys/devices/virtual/dmi/id/bios_version"
 #define BMC_VER1_PATH  "/sys/devices/platform/ipmi_bmc.0/firmware_revision"
 #define BMC_VER2_PATH  "/sys/devices/platform/ipmi_bmc.0/aux_firmware_revision"
+#define BMC_THERMAL_DATA_PATH   "/sys/devices/platform/as7927_50x_sys/bmc_thermal_data"
 
 enum onlp_thermal_id {
     THERMAL_RESERVED = 0,
