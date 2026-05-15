@@ -93,12 +93,19 @@ enum onlp_fan_dir {
     FAN_DIR_COUNT
 };
 
+enum onlp_psu_type {
+    PSU_TYPE_DC,
+    PSU_TYPE_AC,
+    PSU_TYPE_COUNT
+};
+
 typedef enum as7927_50x_platform_id {
     as7927_50x,
     PID_UNKNOWN
 } as7927_50x_platform_id_t;
 
 enum onlp_fan_dir onlp_get_fan_dir(int fid);
+enum onlp_psu_type onlp_get_psu_type(int pid);
 int onlp_get_psu_hwmon_idx(int pid);
 int onlp_get_fan_hwmon_idx(void);
 

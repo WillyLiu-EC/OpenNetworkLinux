@@ -27,6 +27,29 @@
 #include <onlplib/file.h>
 #include "platform_lib.h"
 
+enum onlp_psu_type onlp_get_psu_type(int pid)
+{
+    int hwmon_idx;
+    int val;
+    char file[32];
+    enum onlp_psu_type type = PSU_TYPE_DC;
+
+    hwmon_idx = onlp_get_psu_hwmon_idx(pid);
+    if (hwmon_idx < 0) {
+        return type;
+    }
+
+    snprintf(file, sizeof(file), "psu%d_type", pid);
+
+    if (onlp_file_read_int(&val, PSU_SYSFS_FORMAT_1, hwmon_idx, file) == 0) {
+        if (val >= 0 && val < PSU_TYPE_COUNT) {
+            type = (enum onlp_psu_type)val;
+        }
+    }
+
+    return type;
+}
+
 enum onlp_fan_dir onlp_get_fan_dir(int fid)
 {
     int len = 0;
