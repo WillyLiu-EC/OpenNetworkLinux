@@ -27,6 +27,8 @@
 #include <onlplib/file.h>
 #include "platform_lib.h"
 
+#define PSU_MODEL_NAME_LEN 10
+
 enum onlp_fan_dir onlp_get_fan_dir(int fid)
 {
     int len = 0;
@@ -106,4 +108,38 @@ int onlp_get_fan_hwmon_idx(void)
     }
 
     return -1;
+}
+
+psu_type_t get_psu_type(int pid)
+{
+    int len = 0;
+    int hwmon_idx;
+    char *mn = NULL;
+    char file[32];
+
+    hwmon_idx = onlp_get_psu_hwmon_idx(pid);
+    if (hwmon_idx < 0) {
+        return PSU_TYPE_UNKNOWN;
+    }
+
+    snprintf(file, sizeof(file), "psu%d_model", pid);
+    len = onlp_file_read_str(&mn, PSU_SYSFS_FORMAT_1, hwmon_idx, file);
+
+    if (len <= 0 || len > PSU_MODEL_NAME_LEN || mn == NULL) {
+        AIM_FREE_IF_PTR(mn);
+        return PSU_TYPE_UNKNOWN;
+    }
+
+    if (!strncmp(mn, "PS-2202-8L", strlen("PS-2202-8L"))) {
+        AIM_FREE_IF_PTR(mn);
+        return PSU_TYPE_PS_2202;
+    }
+
+    if (!strncmp(mn, "DD-2202-1L", strlen("DD-2202-1L"))) {
+        AIM_FREE_IF_PTR(mn);
+        return PSU_TYPE_DD_2202;
+    }
+
+    AIM_FREE_IF_PTR(mn);
+    return PSU_TYPE_UNKNOWN;
 }
