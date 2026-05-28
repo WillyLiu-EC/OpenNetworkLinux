@@ -44,6 +44,15 @@
 #define SYS_LED_PATH   "/sys/devices/platform/as9947_36xkb_led/"
 #define IDPROM_PATH "/sys/bus/platform/devices/as9947_36xkb_sys/eeprom"
 
+#define PSU_STATUS_POWER_GOOD 1
+
+typedef enum psu_type {
+    PSU_TYPE_PS_2202 = 0,
+    PSU_TYPE_DD_2202,
+    PSU_TYPE_UNKNOWN,
+    PSU_TYPE_COUNT = PSU_TYPE_UNKNOWN,
+} psu_type_t;
+
 enum onlp_thermal_id {
     THERMAL_RESERVED = 0,
     THERMAL_CPU_CORE,
@@ -88,6 +97,7 @@ typedef enum as9947_36xkb_platform_id {
 enum onlp_fan_dir onlp_get_fan_dir(int fid);
 int onlp_get_psu_hwmon_idx(int pid);
 int onlp_get_fan_hwmon_idx(void);
+psu_type_t get_psu_type(int tid);
 
 #define AIM_FREE_IF_PTR(p) \
     do \
